@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx vite --port 5188"],
+      "port": 5188
+    }
+  ]
+}
