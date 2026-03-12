@@ -5,6 +5,8 @@ import { GameBoard } from './GameBoard.tsx';
 import { TileRack } from './TileRack.tsx';
 import { CombatHUD } from './CombatHUD.tsx';
 import { ActionBar } from './ActionBar.tsx';
+import { BattleOverlay } from '../combat/BattleOverlay.tsx';
+import { FeedbackButton } from './FeedbackButton.tsx';
 import type { EnemyState } from '../store/gameStore.ts';
 
 // Chapter 1, Fight 1: Simple enemy for MVP
@@ -75,7 +77,10 @@ export function Game() {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         {/* Board area */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <GameBoard />
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <GameBoard />
+            <BattleOverlay />
+          </div>
           <ActionBar />
           <TileRack />
         </div>
@@ -141,6 +146,8 @@ export function Game() {
           </div>
         </div>
       )}
+
+      <FeedbackButton />
     </div>
   );
 }

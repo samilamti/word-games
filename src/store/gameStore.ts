@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import type { BoardCell, Tile } from '../types/index.ts';
+import type { BoardCell, Tile, CombatEvent, Direction } from '../types/index.ts';
 import { BOARD_SIZE, RACK_SIZE } from '../types/index.ts';
+import { saveDispute } from '../beta/feedbackService.ts';
+
+function genEventId(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 import { createEmptyBoard, placeTile, removeTile, validatePlacement } from '../engine/BoardState.ts';
 import { TileBag } from '../engine/TileBag.ts';
 import { getValidator } from '../engine/WordValidator.ts';
@@ -21,6 +26,12 @@ interface PendingTile {
   tile: Tile;
   row: number;
   col: number;
+}
+
+interface RejectionContext {
+  word: string;
+  formedWords: { text: string; cells: [number, number][]; direction: Direction }[];
+  placedCells: [number, number][];
 }
 
 export interface GameState {
@@ -45,8 +56,14 @@ export interface GameState {
   lastScore: ScoreBreakdown | null;
   message: string;
 
+  // Combat animation events
+  combatEvents: CombatEvent[];
+
   // Dictionary loaded
   dictionaryLoaded: boolean;
+
+  // Beta: word dispute tracking
+  lastRejection: RejectionContext | null;
 
   // Actions
   initGame: (enemy: EnemyState) => void;
@@ -56,10 +73,12 @@ export interface GameState {
   removePendingTile: (row: number, col: number) => void;
   returnPendingToRack: () => void;
   submitWord: () => { success: boolean; damage: number; error?: string };
+  disputeWord: (definition: string) => { success: boolean; damage: number };
   swapTiles: (tilesToSwap: Tile[]) => void;
   enemyTurn: () => void;
   drawTiles: () => void;
   setMessage: (msg: string) => void;
+  consumeCombatEvent: (id: string) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -75,8 +94,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   turnNumber: 1,
   pendingTiles: [],
   lastScore: null,
+  combatEvents: [],
   message: 'Loading dictionary...',
   dictionaryLoaded: false,
+  lastRejection: null,
 
   initGame: (enemy: EnemyState) => {
     const tileBag = new TileBag();
@@ -94,6 +115,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       turnNumber: 1,
       pendingTiles: [],
       lastScore: null,
+      combatEvents: [],
+      lastRejection: null,
       message: `A wild ${enemy.name} appears! Spell words to attack!`,
     });
   },
@@ -119,6 +142,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       grid: [...grid.map(r => [...r])], // shallow copy for reactivity
       pendingTiles: [...pendingTiles, { tile, row, col }],
       rack: rack.filter(t => t.id !== tile.id),
+      lastRejection: null,
     });
     return true;
   },
@@ -242,6 +266,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       grid: [...grid.map(r => [...r])],
       pendingTiles: [],
       rack: [...rack, ...pendingTiles.map(p => p.tile)],
+      lastRejection: null,
     });
   },
 
@@ -272,6 +297,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     const validator = getValidator();
     for (const word of validation.formedWords) {
       if (!validator.isWord(word.text)) {
+        set({
+          lastRejection: {
+            word: word.text,
+            formedWords: validation.formedWords,
+            placedCells,
+          },
+        });
         return { success: false, damage: 0, error: `"${word.text}" is not a valid word` };
       }
     }
@@ -296,17 +328,82 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const wordTexts = validation.formedWords.map(w => w.text).join(', ');
 
+    // Build combat animation events
+    const newEvents: CombatEvent[] = [
+      { id: genEventId(), type: 'player_attack', timestamp: Date.now() },
+      { id: genEventId(), type: 'enemy_hurt', damage: totalDamage, timestamp: Date.now() },
+    ];
+    if (newEnemyHp <= 0) {
+      newEvents.push({ id: genEventId(), type: 'enemy_death', timestamp: Date.now() });
+    }
+
     set({
       grid: [...grid.map(r => [...r])],
       pendingTiles: [],
       lastScore: { ...score, totalDamage },
+      lastRejection: null,
       turnNumber: turnNumber + 1,
       enemy: enemy ? { ...enemy, hp: newEnemyHp } : null,
       message: `${wordTexts}! ${totalDamage} damage!`,
       phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
+      combatEvents: [...get().combatEvents, ...newEvents],
     });
 
     // Draw tiles after a short delay (handled by component)
+    return { success: true, damage: totalDamage };
+  },
+
+  disputeWord: (definition: string) => {
+    const { lastRejection, grid, enemy, turnNumber, playerAttack } = get();
+    if (!lastRejection || !enemy) return { success: false, damage: 0 };
+
+    const { formedWords, placedCells, word } = lastRejection;
+
+    // Save dispute to storage
+    saveDispute({
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+      word,
+      definition,
+      timestamp: Date.now(),
+      turnNumber,
+    });
+
+    // Calculate damage as if the word was valid
+    const score = calculatePlacementDamage(grid, formedWords, placedCells);
+    const attackBonus = 1 + playerAttack / 100;
+    const totalDamage = Math.round(score.totalDamage * attackBonus);
+
+    // Mark premium squares as used
+    for (const [r, c] of placedCells) {
+      grid[r][c].premiumUsed = true;
+    }
+
+    // Apply damage to enemy
+    const newEnemyHp = Math.max(0, enemy.hp - totalDamage);
+    const wordTexts = formedWords.map(w => w.text).join(', ');
+
+    // Build combat animation events
+    const newEvents: CombatEvent[] = [
+      { id: genEventId(), type: 'player_attack', timestamp: Date.now() },
+      { id: genEventId(), type: 'enemy_hurt', damage: totalDamage, timestamp: Date.now() },
+    ];
+    if (newEnemyHp <= 0) {
+      newEvents.push({ id: genEventId(), type: 'enemy_death', timestamp: Date.now() });
+    }
+
+    set({
+      grid: [...grid.map(r => [...r])],
+      pendingTiles: [],
+      lastScore: { ...score, totalDamage },
+      lastRejection: null,
+      turnNumber: turnNumber + 1,
+      enemy: { ...enemy, hp: newEnemyHp },
+      message: `${wordTexts}! ${totalDamage} damage! (disputed)`,
+      phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
+      combatEvents: [...get().combatEvents, ...newEvents],
+      rack: get().rack, // pending tiles already on board, rack already updated
+    });
+
     return { success: true, damage: totalDamage };
   },
 
@@ -332,10 +429,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     const damage = Math.max(1, rawDamage - playerDefense);
     const newHp = Math.max(0, playerHp - damage);
 
+    // Build combat animation events
+    const newEvents: CombatEvent[] = [
+      { id: genEventId(), type: 'enemy_attack', timestamp: Date.now() },
+      { id: genEventId(), type: 'player_hurt', damage, timestamp: Date.now() },
+    ];
+    if (newHp <= 0) {
+      newEvents.push({ id: genEventId(), type: 'player_death', timestamp: Date.now() });
+    }
+
     set({
       playerHp: newHp,
       message: `${enemy.name} attacks for ${damage} damage!`,
       phase: newHp <= 0 ? 'defeat' : 'playing',
+      combatEvents: [...get().combatEvents, ...newEvents],
     });
   },
 
@@ -349,6 +456,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setMessage: (msg: string) => set({ message: msg }),
+
+  consumeCombatEvent: (id: string) => set(state => ({
+    combatEvents: state.combatEvents.filter(e => e.id !== id),
+  })),
 }));
 
 // Expose store for debugging

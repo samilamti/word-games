@@ -172,3 +172,37 @@ export const INSERT_BONUS_PER_LETTER = 5;
 export const INSERT_CASCADE_BONUS = 3;
 export const BRANCH_DAMAGE_MULTIPLIER = 1.1;
 export const RACK_SIZE = 7;
+
+// ─── Combat Animation Events ───
+
+export type CombatEventType =
+  | 'player_attack'
+  | 'enemy_attack'
+  | 'player_hurt'
+  | 'enemy_hurt'
+  | 'enemy_death'
+  | 'player_death';
+
+export interface CombatEvent {
+  id: string;
+  type: CombatEventType;
+  damage?: number;
+  timestamp: number;
+}
+
+// ─── Beta Feedback Types ───
+
+export interface WordDispute {
+  id: string;
+  word: string;
+  definition: string;
+  timestamp: number;
+  turnNumber: number;
+}
+
+export interface BetaFeedback {
+  id: string;
+  category: 'bug' | 'suggestion' | 'word' | 'other';
+  message: string;
+  timestamp: number;
+}
