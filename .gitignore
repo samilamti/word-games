@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# iOS / Capacitor
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+ios/App/Podfile.lock
+ios/App/App/public/
+ios/.sourcemaps/
+ios/capacitor-cordova-ios-plugins/
+
+# ASC API automation state (resource IDs, build numbers, etc.)
+build/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

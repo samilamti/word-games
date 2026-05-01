@@ -53,8 +53,8 @@ export function Game() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 16,
-        padding: 20,
+        gap: 12,
+        padding: 'clamp(8px, 2vw, 20px)',
         minHeight: '100vh',
         backgroundColor: '#0d0d1a',
         color: '#e0e0e0',
@@ -64,17 +64,26 @@ export function Game() {
       <h1
         style={{
           margin: 0,
-          fontSize: 28,
+          fontSize: 'clamp(20px, 5vw, 28px)',
           background: 'linear-gradient(135deg, #ffd54f, #ff9800)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           letterSpacing: 2,
         }}
       >
-        LEXICON QUEST
+        LEXICA KNIGHTS
       </h1>
 
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 16,
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          width: '100%',
+        }}
+      >
         {/* Board area */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ position: 'relative', display: 'inline-block' }}>

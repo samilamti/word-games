@@ -3,7 +3,6 @@ import type { BoardCell, PremiumType, Tile } from '../types/index.ts';
 import { BOARD_SIZE } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 
-const CELL_SIZE = 40;
 const GAP = 2;
 
 const PREMIUM_COLORS: Record<PremiumType, string> = {
@@ -86,8 +85,8 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
   return (
     <div
       style={{
-        width: CELL_SIZE,
-        height: CELL_SIZE,
+        width: 'var(--tile-size)',
+        height: 'var(--tile-size)',
         backgroundColor: hasTile ? tileBg : bgColor,
         border: isPending ? '2px solid #ff9800' : '1px solid #3a3a5c',
         borderRadius: 3,
@@ -96,7 +95,7 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
         justifyContent: 'center',
         cursor: isVoid ? 'not-allowed' : hasTile && isPending ? 'pointer' : 'default',
         position: 'relative',
-        fontSize: hasTile ? 16 : 9,
+        fontSize: hasTile ? 'calc(var(--tile-size) * 0.55)' : 'calc(var(--tile-size) * 0.28)',
         fontWeight: hasTile ? 'bold' : 'normal',
         color: hasTile ? '#1a1a2e' : '#8888aa',
         userSelect: 'none',
@@ -114,7 +113,7 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
               position: 'absolute',
               bottom: 1,
               right: 3,
-              fontSize: 8,
+              fontSize: 'calc(var(--tile-size) * 0.26)',
               color: '#666',
             }}
           >
@@ -163,7 +162,7 @@ export function GameBoard() {
     <div
       style={{
         display: 'inline-grid',
-        gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
+        gridTemplateColumns: `repeat(${BOARD_SIZE}, var(--tile-size))`,
         gap: GAP,
         padding: GAP,
         backgroundColor: '#16162a',

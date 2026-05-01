@@ -2,8 +2,6 @@ import { useCallback } from 'react';
 import type { Tile } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 
-const TILE_SIZE = 48;
-
 const TIER_COLORS: Record<string, string> = {
   common: '#f5e6c8',
   uncommon: '#c8e6c9',
@@ -46,8 +44,8 @@ function RackTile({ tile, onTap }: RackTileProps) {
       onDragStart={handleDragStart}
       onClick={handleClick}
       style={{
-        width: TILE_SIZE,
-        height: TILE_SIZE,
+        width: 'var(--rack-tile-size)',
+        height: 'var(--rack-tile-size)',
         backgroundColor: TIER_COLORS[tier],
         border: '2px solid #8d6e63',
         borderRadius: 4,
@@ -56,7 +54,7 @@ function RackTile({ tile, onTap }: RackTileProps) {
         justifyContent: 'center',
         cursor: 'grab',
         position: 'relative',
-        fontSize: 22,
+        fontSize: 'calc(var(--rack-tile-size) * 0.46)',
         fontWeight: 'bold',
         color: '#1a1a2e',
         userSelect: 'none',
@@ -79,7 +77,7 @@ function RackTile({ tile, onTap }: RackTileProps) {
           position: 'absolute',
           bottom: 2,
           right: 4,
-          fontSize: 10,
+          fontSize: 'calc(var(--rack-tile-size) * 0.22)',
           color: '#666',
         }}
       >
@@ -104,8 +102,9 @@ export function TileRack() {
         borderRadius: 8,
         border: '2px solid #3a3a5c',
         justifyContent: 'center',
-        minHeight: TILE_SIZE + 24,
+        minHeight: 'calc(var(--rack-tile-size) + 24px)',
         opacity: phase === 'playing' ? 1 : 0.6,
+        flexWrap: 'wrap',
       }}
     >
       {rack.length === 0 ? (

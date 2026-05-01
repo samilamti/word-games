@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#2a1850" />
+      <stop offset="55%" stop-color="#13092a" />
+      <stop offset="100%" stop-color="#05030c" />
+    </radialGradient>
+
+    <linearGradient id="tileGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff4c8" />
+      <stop offset="45%" stop-color="#ffd76a" />
+      <stop offset="100%" stop-color="#e89313" />
+    </linearGradient>
+
+    <linearGradient id="tileBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
+      <stop offset="40%" stop-color="rgba(255,255,255,0)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.35)" />
+    </linearGradient>
+
+    <linearGradient id="starGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff7d6" />
+      <stop offset="100%" stop-color="#ffb936" />
+    </linearGradient>
+
+    <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(255,213,79,0.55)" />
+      <stop offset="100%" stop-color="rgba(255,213,79,0)" />
+    </radialGradient>
+
+    <filter id="tileShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" />
+      <feOffset dx="0" dy="20" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.55" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Opaque background (Apple requirement) -->
+  <rect width="1024" height="1024" fill="#05030c" />
+  <rect width="1024" height="1024" fill="url(#bg)" />
+
+  <!-- Star glow halo behind tile -->
+  <circle cx="780" cy="244" r="200" fill="url(#starGlow)" />
+
+  <!-- Star sparkle accent (top-right) -->
+  <g transform="translate(780,244)">
+    <path d="M0,-100 L24,-30 L96,-22 L40,22 L58,94 L0,54 L-58,94 L-40,22 L-96,-22 L-24,-30 Z"
+          fill="url(#starGold)" stroke="#a96a00" stroke-width="3" />
+  </g>
+
+  <!-- Main game tile, slightly rotated for dynamism -->
+  <g transform="translate(512,540) rotate(-7)" filter="url(#tileShadow)">
+    <!-- Tile body -->
+    <rect x="-310" y="-310" width="620" height="620" rx="68" ry="68"
+          fill="url(#tileGold)" stroke="#7a4a18" stroke-width="14" />
+    <!-- Bevel highlight -->
+    <rect x="-300" y="-300" width="600" height="600" rx="60" ry="60"
+          fill="url(#tileBevel)" />
+    <!-- Letter L -->
+    <text x="0" y="155" font-family="Georgia, 'Times New Roman', serif"
+          font-size="640" font-weight="bold" text-anchor="middle"
+          fill="#1a1024">L</text>
+    <!-- Point value (Scrabble-style corner) -->
+    <text x="240" y="265" font-family="Georgia, serif"
+          font-size="92" font-weight="bold" text-anchor="middle"
+          fill="#3a2010">1</text>
+  </g>
+</svg>

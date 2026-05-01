@@ -1,4 +1,4 @@
-# Lexicon Quest
+# Lexica Knights
 
 **A word combat RPG where spelling is your weapon.**
 
@@ -167,7 +167,7 @@ A floating **Beta Feedback** button in the bottom-right lets players submit:
 
 All data is stored in `localStorage`. To enable remote forwarding, set `FEEDBACK_API_URL` in `src/beta/feedbackService.ts`.
 
-**localStorage keys:** `lexicon_quest_disputes`, `lexicon_quest_feedback`
+**localStorage keys:** `lexica_knights_disputes`, `lexica_knights_feedback`
 
 ---
 
@@ -199,4 +199,4 @@ The game auto-deploys to **GitHub Pages** on every push to `main`.
 
 ## License
 
-TBD
+Released under the Business Source License 1.1 — see [LICENSE.MD](./LICENSE.MD). Converts to an open-source license (GPL 2.0+ compatible) on the fourth anniversary of the first publicly available distribution.

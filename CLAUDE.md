@@ -1,4 +1,4 @@
-# Lexicon Quest - Word Combat RPG
+# Lexica Knights - Word Combat RPG
 
 ## Tech Stack
 - Vite + React 19 + TypeScript + Zustand (state management)
@@ -47,6 +47,6 @@
 
 ## Beta Feedback System
 - `src/beta/feedbackService.ts` — Set `FEEDBACK_API_URL` to enable remote POST (empty = localStorage only)
-- localStorage keys: `lexicon_quest_disputes`, `lexicon_quest_feedback`
+- localStorage keys: `lexica_knights_disputes`, `lexica_knights_feedback`
 - Word disputes: when a word is rejected, player can dispute it → word is accepted, scored, and dispute is stored for review
 - `disputeWord()` in gameStore replays the scoring path, skipping dictionary validation

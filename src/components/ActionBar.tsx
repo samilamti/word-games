@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { DisputeDialog } from './DisputeDialog.tsx';
+import { triggerHaptic } from '../native/init.ts';
 
 export function ActionBar() {
   const phase = useGameStore(s => s.phase);
@@ -12,6 +13,7 @@ export function ActionBar() {
   const [showDispute, setShowDispute] = useState(false);
 
   const handleSubmit = useCallback(() => {
+    triggerHaptic();
     const result = submitWord();
     if (!result.success && result.error) {
       setMessage(result.error);

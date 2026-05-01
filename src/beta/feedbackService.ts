@@ -4,8 +4,8 @@ import type { WordDispute, BetaFeedback } from '../types/index.ts';
 // Leave empty to only use localStorage.
 const FEEDBACK_API_URL = '';
 
-const DISPUTES_KEY = 'lexicon_quest_disputes';
-const FEEDBACK_KEY = 'lexicon_quest_feedback';
+const DISPUTES_KEY = 'lexica_knights_disputes';
+const FEEDBACK_KEY = 'lexica_knights_feedback';
 
 function readArray<T>(key: string): T[] {
   try {
