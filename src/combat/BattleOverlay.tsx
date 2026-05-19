@@ -337,6 +337,125 @@ class DamageNumberManager {
   }
 }
 
+// ─── Floating HP Bars ───
+
+class HpBar {
+  container: Container;
+  private bg: Graphics;
+  private fill: Graphics;
+  private hpText: Text;
+  private nameText: Text | null = null;
+  private statsText: Text | null = null;
+  private currentHp = -1;
+  private maxHp = -1;
+  private name = '';
+  private stats = '';
+  private color: number;
+
+  static WIDTH = 110;
+  static HEIGHT = 12;
+
+  constructor(opts: { isPlayer: boolean; showName: boolean; showStats: boolean }) {
+    this.color = opts.isPlayer ? 0x4caf50 : 0xef5350;
+    this.container = new Container();
+
+    this.bg = new Graphics();
+    this.fill = new Graphics();
+    this.container.addChild(this.bg);
+    this.container.addChild(this.fill);
+
+    if (opts.showName) {
+      this.nameText = new Text({
+        text: '',
+        style: new TextStyle({
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          fontSize: 14,
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          stroke: { color: '#000000', width: 3 },
+        }),
+      });
+      this.nameText.anchor.set(0.5, 1);
+      this.container.addChild(this.nameText);
+    }
+
+    this.hpText = new Text({
+      text: '',
+      style: new TextStyle({
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        fontSize: 10,
+        fontWeight: 'bold',
+        fill: '#ffffff',
+        stroke: { color: '#000000', width: 1.5 },
+      }),
+    });
+    this.hpText.anchor.set(0.5, 0.5);
+    this.container.addChild(this.hpText);
+
+    if (opts.showStats) {
+      this.statsText = new Text({
+        text: '',
+        style: new TextStyle({
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          fontSize: 10,
+          fontWeight: 'bold',
+          fill: '#cccccc',
+          stroke: { color: '#000000', width: 1.5 },
+        }),
+      });
+      this.statsText.anchor.set(0.5, 0);
+      this.container.addChild(this.statsText);
+    }
+  }
+
+  update(currentHp: number, maxHp: number, name: string, stats: string) {
+    if (
+      currentHp === this.currentHp &&
+      maxHp === this.maxHp &&
+      name === this.name &&
+      stats === this.stats
+    ) return;
+    this.currentHp = currentHp;
+    this.maxHp = maxHp;
+    this.name = name;
+    this.stats = stats;
+
+    const w = HpBar.WIDTH;
+    const h = HpBar.HEIGHT;
+    const pct = maxHp > 0 ? Math.max(0, Math.min(1, currentHp / maxHp)) : 0;
+
+    // Dark backdrop with subtle stroke
+    this.bg.clear();
+    this.bg.roundRect(-w / 2, 0, w, h, 4);
+    this.bg.fill({ color: 0x16162a, alpha: 0.88 });
+    this.bg.roundRect(-w / 2, 0, w, h, 4);
+    this.bg.stroke({ color: 0x3a3a5c, width: 1.5 });
+
+    // Colored fill, width proportional to HP %
+    this.fill.clear();
+    if (pct > 0) {
+      this.fill.roundRect(-w / 2 + 1.5, 1.5, (w - 3) * pct, h - 3, 3);
+      this.fill.fill(this.color);
+    }
+
+    if (this.nameText) {
+      this.nameText.text = name;
+      this.nameText.position.set(0, -3);
+    }
+    this.hpText.text = `${currentHp}/${maxHp}`;
+    this.hpText.position.set(0, h / 2);
+    if (this.statsText) {
+      this.statsText.text = stats;
+      this.statsText.position.set(0, h + 2);
+    }
+  }
+
+  setPosition(x: number, y: number) {
+    this.container.x = x;
+    this.container.y = y;
+  }
+}
+
 // ─── Sound-Event Mapping ───
 
 function playSoundForEvent(type: CombatEvent['type']) {
@@ -387,6 +506,8 @@ export function BattleOverlay() {
   const playerRef = useRef<CharacterController | null>(null);
   const enemyRef = useRef<CharacterController | null>(null);
   const dmgRef = useRef<DamageNumberManager | null>(null);
+  const playerHpBarRef = useRef<HpBar | null>(null);
+  const enemyHpBarRef = useRef<HpBar | null>(null);
   const scaleRef = useRef(1);
   const processingRef = useRef(false);
   const queueRef = useRef<CombatEvent[]>([]);
@@ -451,6 +572,27 @@ export function BattleOverlay() {
       app.stage.addChild(dmg.container);
       dmgRef.current = dmg;
 
+      // Floating HP bars — children of the stage (not the character containers)
+      // so they stay at a fixed on-screen size regardless of character scale.
+      const playerHpBar = new HpBar({ isPlayer: true, showName: false, showStats: false });
+      const enemyHpBar = new HpBar({ isPlayer: false, showName: true, showStats: true });
+      app.stage.addChild(playerHpBar.container);
+      app.stage.addChild(enemyHpBar.container);
+      playerHpBarRef.current = playerHpBar;
+      enemyHpBarRef.current = enemyHpBar;
+
+      // Seed bars from current state
+      const initialEnemy = state.enemy;
+      playerHpBar.update(state.playerHp, state.playerMaxHp, '', '');
+      if (initialEnemy) {
+        enemyHpBar.update(
+          initialEnemy.hp,
+          initialEnemy.maxHp,
+          initialEnemy.name,
+          `ATK ${initialEnemy.attack}  DEF ${initialEnemy.defense}`,
+        );
+      }
+
       const updateLayout = (size: number) => {
         if (size <= 0) return;
         const scale = size / REFERENCE_SIZE;
@@ -468,6 +610,22 @@ export function BattleOverlay() {
         enemy.container.x = enemy.baseX;
         enemy.container.y = enemy.baseY;
         enemy.container.scale.set(-scale, scale); // flip horizontally to face left
+
+        // HP bars float at a constant on-screen size above each character.
+        // The character body extends roughly 85 design-units upward from baseY,
+        // so offset by scaled body height + a gap. The enemy bar sits a touch
+        // higher because it has a name label above it. We clamp X so the
+        // bars don't extend past the canvas edge on small viewports — the
+        // character may be tight against the edge but the bar (constant
+        // pixel width) needs breathing room.
+        const CHAR_BODY_HEIGHT = 85;
+        const halfBar = HpBar.WIDTH / 2;
+        const playerBarY = player.baseY - CHAR_BODY_HEIGHT * scale - 22;
+        const enemyBarY = enemy.baseY - CHAR_BODY_HEIGHT * scale - 36;
+        const playerBarX = Math.max(halfBar + 4, player.baseX);
+        const enemyBarX = Math.min(size - halfBar - 4, enemy.baseX);
+        playerHpBar.setPosition(playerBarX, playerBarY);
+        enemyHpBar.setPosition(enemyBarX, enemyBarY);
       };
 
       const parent = containerRef.current?.parentElement;
@@ -512,6 +670,25 @@ export function BattleOverlay() {
       if (state.phase !== prev.phase && playerRef.current) {
         playerRef.current.idleAlpha =
           state.phase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT;
+      }
+
+      // Keep floating HP bars in sync with store state.
+      if (state.playerHp !== prev.playerHp || state.playerMaxHp !== prev.playerMaxHp) {
+        playerHpBarRef.current?.update(state.playerHp, state.playerMaxHp, '', '');
+      }
+      if (state.enemy && (
+        state.enemy.hp !== prev.enemy?.hp ||
+        state.enemy.maxHp !== prev.enemy?.maxHp ||
+        state.enemy.name !== prev.enemy?.name ||
+        state.enemy.attack !== prev.enemy?.attack ||
+        state.enemy.defense !== prev.enemy?.defense
+      )) {
+        enemyHpBarRef.current?.update(
+          state.enemy.hp,
+          state.enemy.maxHp,
+          state.enemy.name,
+          `ATK ${state.enemy.attack}  DEF ${state.enemy.defense}`,
+        );
       }
 
       // Enemy swap (new monster spawned via nextEnemy / restart) — rebuild
