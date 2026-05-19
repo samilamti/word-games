@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { loadDictionary } from '../engine/WordValidator.ts';
 import { GameBoard } from './GameBoard.tsx';
@@ -7,8 +7,10 @@ import { CombatHUD } from './CombatHUD.tsx';
 import { ActionBar } from './ActionBar.tsx';
 import { BattleOverlay } from '../combat/BattleOverlay.tsx';
 import { FeedbackButton } from './FeedbackButton.tsx';
+import { LeaderboardButton } from './LeaderboardButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
+import { recordRun } from '../leaderboard/leaderboard.ts';
 
 export function Game() {
   const phase = useGameStore(s => s.phase);
@@ -18,6 +20,7 @@ export function Game() {
   const enemyTurn = useGameStore(s => s.enemyTurn);
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
+  const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
 
   // Load dictionary on mount
   useEffect(() => {
@@ -26,6 +29,27 @@ export function Game() {
       initGame(0);
     });
   }, []);
+
+  // Record the run to the leaderboard when the player wins. We dedupe by
+  // enemyAppearAt timestamp so a single victory only emits one entry even
+  // if the phase effect re-runs during StrictMode dev double-mount.
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    const s = useGameStore.getState();
+    if (!s.enemy) return;
+    if (recordedRunRef.current === s.enemyAppearAt) return;
+    recordedRunRef.current = s.enemyAppearAt;
+    recordRun({
+      timestamp: Date.now(),
+      enemyType: s.enemy.type,
+      enemyName: s.enemy.name,
+      enemyIndex: s.enemyIndex,
+      totalDamage: s.runDamageTotal,
+      turns: s.turnNumber,
+      longestWord: s.runLongestWord,
+      highestSingleHit: s.runHighestHit,
+    });
+  }, [phase]);
 
   // Handle enemy turn with delay
   useEffect(() => {
@@ -182,6 +206,7 @@ export function Game() {
 
       <EnemyAppearToast />
       <FeedbackButton />
+      <LeaderboardButton />
     </div>
   );
 }

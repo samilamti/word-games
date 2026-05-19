@@ -59,6 +59,11 @@ export interface GameState {
    *  message into the long-lived `message` field (which would expand the HUD). */
   enemyAppearAt: number;
 
+  // Leaderboard tracking (current run; reset on initGame, recorded on victory)
+  runDamageTotal: number;
+  runHighestHit: number;
+  runLongestWord: string;
+
   // Turn state
   phase: GamePhase;
   turnNumber: number;
@@ -103,6 +108,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   enemy: null,
   enemyIndex: 0,
   enemyAppearAt: 0,
+  runDamageTotal: 0,
+  runHighestHit: 0,
+  runLongestWord: '',
   phase: 'loading',
   turnNumber: 1,
   pendingTiles: [],
@@ -144,6 +152,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastScore: null,
       combatEvents: [],
       lastRejection: null,
+      runDamageTotal: 0,
+      runHighestHit: 0,
+      runLongestWord: '',
       message: 'Your turn — spell a word!',
     });
   },
@@ -365,6 +376,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const wordTexts = validation.formedWords.map(w => w.text).join(', ');
+    // Track best/longest word this run for the leaderboard.
+    const longestThisTurn = validation.formedWords.reduce(
+      (best, w) => (w.text.length > best.length ? w.text : best),
+      get().runLongestWord,
+    );
 
     // Build combat animation events
     const newEvents: CombatEvent[] = [
@@ -385,6 +401,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       message: `${wordTexts}! ${totalDamage} damage!`,
       phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
       combatEvents: [...get().combatEvents, ...newEvents],
+      runDamageTotal: get().runDamageTotal + totalDamage,
+      runHighestHit: Math.max(get().runHighestHit, totalDamage),
+      runLongestWord: longestThisTurn,
     });
 
     // Draw tiles after a short delay (handled by component)
@@ -419,6 +438,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Apply damage to enemy
     const newEnemyHp = Math.max(0, enemy.hp - totalDamage);
     const wordTexts = formedWords.map(w => w.text).join(', ');
+    const longestThisTurn = formedWords.reduce(
+      (best, w) => (w.text.length > best.length ? w.text : best),
+      get().runLongestWord,
+    );
 
     // Build combat animation events
     const newEvents: CombatEvent[] = [
@@ -439,6 +462,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       message: `${wordTexts}! ${totalDamage} damage! (disputed)`,
       phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
       combatEvents: [...get().combatEvents, ...newEvents],
+      runDamageTotal: get().runDamageTotal + totalDamage,
+      runHighestHit: Math.max(get().runHighestHit, totalDamage),
+      runLongestWord: longestThisTurn,
       rack: get().rack, // pending tiles already on board, rack already updated
     });
 
