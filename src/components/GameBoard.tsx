@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { BoardCell, PremiumType, Tile } from '../types/index.ts';
+import type { BoardCell, PremiumType } from '../types/index.ts';
 import { BOARD_SIZE } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 
@@ -22,7 +22,7 @@ const PREMIUM_LABELS: Record<PremiumType, string> = {
   TRIPLE_WORD: 'TW',
   GEM_FORGE: 'GF',
   VOID: '',
-  CENTER: '\u2605',
+  CENTER: '★',
 };
 
 const TIER_COLORS: Record<string, string> = {
@@ -42,24 +42,10 @@ function getTierForPoints(points: number): string {
 interface CellProps {
   cell: BoardCell;
   isPending: boolean;
-  onDrop: (row: number, col: number) => void;
   onClick: (row: number, col: number) => void;
 }
 
-function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      onDrop(cell.row, cell.col);
-    },
-    [cell.row, cell.col, onDrop],
-  );
-
+function Cell({ cell, isPending, onClick }: CellProps) {
   const handleClick = useCallback(() => {
     onClick(cell.row, cell.col);
   }, [cell.row, cell.col, onClick]);
@@ -82,8 +68,15 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
         : TIER_COLORS[getTierForPoints(cell.tile!.pointValue)]
     : undefined;
 
+  // Drop targets: empty, non-void cells. The TileRack uses elementFromPoint +
+  // closest('[data-cell-row][data-cell-col]') to find the cell under the
+  // pointer at drop time.
+  const isDropTarget = !isVoid && !hasTile;
+
   return (
     <div
+      data-cell-row={isDropTarget ? cell.row : undefined}
+      data-cell-col={isDropTarget ? cell.col : undefined}
       style={{
         width: 'var(--tile-size)',
         height: 'var(--tile-size)',
@@ -101,8 +94,6 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
         userSelect: 'none',
         boxSizing: 'border-box',
       }}
-      onDragOver={!isVoid && !hasTile ? handleDragOver : undefined}
-      onDrop={!isVoid && !hasTile ? handleDrop : undefined}
       onClick={isPending ? handleClick : undefined}
     >
       {hasTile ? (
@@ -130,25 +121,11 @@ function Cell({ cell, isPending, onDrop, onClick }: CellProps) {
 export function GameBoard() {
   const grid = useGameStore(s => s.grid);
   const pendingTiles = useGameStore(s => s.pendingTiles);
-  const placePendingTile = useGameStore(s => s.placePendingTile);
   const removePendingTile = useGameStore(s => s.removePendingTile);
-  const phase = useGameStore(s => s.phase);
 
   const pendingSet = new Set(pendingTiles.map(p => `${p.row},${p.col}`));
 
-  const handleDrop = useCallback(
-    (row: number, col: number) => {
-      if (phase !== 'playing') return;
-      // Get the dragged tile data
-      const dragData = (window as unknown as { __dragTile?: Tile }).__dragTile;
-      if (dragData) {
-        placePendingTile(dragData, row, col);
-        (window as unknown as { __dragTile?: Tile }).__dragTile = undefined;
-      }
-    },
-    [placePendingTile, phase],
-  );
-
+  // Single-tap on a pending board tile returns it to the rack.
   const handleCellClick = useCallback(
     (row: number, col: number) => {
       if (pendingSet.has(`${row},${col}`)) {
@@ -175,7 +152,6 @@ export function GameBoard() {
           key={`${cell.row}-${cell.col}`}
           cell={cell}
           isPending={pendingSet.has(`${cell.row},${cell.col}`)}
-          onDrop={handleDrop}
           onClick={handleCellClick}
         />
       ))}

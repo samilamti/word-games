@@ -1,15 +1,25 @@
 import { useEffect, useRef } from 'react';
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { BOARD_SIZE } from '../types/index.ts';
 import type { CombatEvent } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 import { soundManager } from '../audio/SoundManager.ts';
 
-// Board pixel dimensions (must match GameBoard.tsx)
-const CELL_SIZE = 40;
-const GAP = 2;
-const BORDER = 2;
-const BOARD_PX = BORDER + GAP + BOARD_SIZE * CELL_SIZE + (BOARD_SIZE - 1) * GAP + GAP + BORDER;
+// Reference canvas size at which character positions and sprite scales were
+// designed. Real canvas size now tracks the rendered GameBoard (responsive
+// via --tile-size CSS clamp) and we scale character containers + reposition
+// their base coords on every resize.
+const REFERENCE_SIZE = 544;
+
+// Character positions in REFERENCE_SIZE coordinates (will be scaled).
+const PLAYER_BASE_X = 55;
+const ENEMY_BASE_X = REFERENCE_SIZE - 55;
+const CHAR_BASE_Y_OFFSET = 25; // pixels above the bottom edge
+
+// Wizard alpha targets — used to fade the hero out during tile placement so
+// it doesn't obscure the bottom-left tiles, and bring it back into combat.
+const WIZARD_ALPHA_PLAYING = 0.22;
+const WIZARD_ALPHA_COMBAT = 0.9;
+const GOBLIN_ALPHA = 0.9;
 
 // ─── Easing ───
 
@@ -20,151 +30,92 @@ function easeOutQuad(t: number): number {
 // ─── Character Drawing ───
 
 function drawShadow(g: Graphics) {
-  // Ground shadow oval to help character pop against dark backgrounds
   g.ellipse(0, 2, 28, 8);
   g.fill({ color: 0x000000, alpha: 0.35 });
 }
 
 function drawWizard(g: Graphics) {
   drawShadow(g);
-
-  // Robe body (trapezoid) — bright blue
   g.poly([-18, 0, 18, 0, 12, -45, -12, -45]);
   g.fill(0x6688dd);
-
-  // Robe trim
   g.rect(-18, -2, 36, 4);
   g.fill(0x88aaee);
-
-  // Robe highlights
   g.poly([-6, -5, 6, -5, 4, -40, -4, -40]);
   g.fill({ color: 0xaabbff, alpha: 0.3 });
-
-  // Head
   g.circle(0, -55, 13);
   g.fill(0xffd5b0);
-
-  // Cheeks (blush)
   g.circle(-8, -52, 4);
   g.fill({ color: 0xff9999, alpha: 0.3 });
   g.circle(8, -52, 4);
   g.fill({ color: 0xff9999, alpha: 0.3 });
-
-  // Hat brim
   g.ellipse(0, -48, 20, 5);
   g.fill(0x8855cc);
-
-  // Hat cone — brighter purple
   g.poly([0, -82, -16, -48, 16, -48]);
   g.fill(0x8855cc);
-
-  // Hat band
   g.rect(-14, -52, 28, 4);
   g.fill(0xffd700);
-
-  // Hat tip ornament (diamond shape instead of star)
   g.poly([0, -78, -4, -72, 0, -66, 4, -72]);
   g.fill(0xffd700);
-
-  // Eyes
   g.circle(-5, -56, 2.5);
   g.fill(0x222244);
   g.circle(5, -56, 2.5);
   g.fill(0x222244);
-
-  // Eye glints
   g.circle(-4, -57, 1);
   g.fill(0xffffff);
   g.circle(6, -57, 1);
   g.fill(0xffffff);
-
-  // Smile
   g.arc(0, -52, 5, 0.2, Math.PI - 0.2);
   g.stroke({ color: 0x664433, width: 1.5 });
-
-  // Staff
   g.moveTo(18, -5);
   g.lineTo(20, -60);
   g.stroke({ color: 0xaa7744, width: 3 });
-
-  // Staff orb
   g.circle(20, -63, 7);
   g.fill(0x00ccff);
-
-  // Staff orb glow (lighter inner)
   g.circle(19, -64, 3.5);
   g.fill(0xaaeeff);
 }
 
 function drawGoblin(g: Graphics) {
   drawShadow(g);
-
-  // Body (squat) — brighter leather
   g.roundRect(-16, -38, 32, 38, 4);
   g.fill(0x7a5535);
-
-  // Belt
   g.rect(-16, -20, 32, 5);
   g.fill(0x4a3218);
-
-  // Belt buckle
   g.rect(-4, -20, 8, 5);
   g.fill(0xddbb55);
-
-  // Head — brighter green
   g.circle(0, -48, 16);
   g.fill(0x5aaa5a);
-
-  // Left ear
   g.poly([-16, -55, -12, -46, -22, -42]);
   g.fill(0x4a9a4a);
-
-  // Right ear
   g.poly([16, -55, 12, -46, 22, -42]);
   g.fill(0x4a9a4a);
-
-  // Eyes (angry slant)
   g.circle(-6, -50, 3);
   g.fill(0xff3333);
   g.circle(6, -50, 3);
   g.fill(0xff3333);
-
-  // Pupils
   g.circle(-6, -50, 1.5);
   g.fill(0x220000);
   g.circle(6, -50, 1.5);
   g.fill(0x220000);
-
-  // Eyebrow slants
   g.moveTo(-10, -55);
   g.lineTo(-3, -53);
   g.stroke({ color: 0x2d5a2d, width: 2 });
   g.moveTo(10, -55);
   g.lineTo(3, -53);
   g.stroke({ color: 0x2d5a2d, width: 2 });
-
-  // Mouth (fangs)
   g.moveTo(-6, -40);
   g.lineTo(0, -38);
   g.lineTo(6, -40);
   g.stroke({ color: 0x333333, width: 1.5 });
-
-  // Fangs
   g.poly([-3, -40, -1, -36, -5, -36]);
   g.fill(0xeeeeee);
   g.poly([3, -40, 5, -36, 1, -36]);
   g.fill(0xeeeeee);
-
-  // Club
   g.moveTo(20, -8);
   g.lineTo(22, -42);
   g.stroke({ color: 0x6a4a2a, width: 4 });
-
-  // Club head
   g.ellipse(22, -46, 9, 7);
   g.fill(0x5a3a1a);
-
-  // Club spikes
   g.circle(16, -48, 2);
   g.fill(0x888888);
   g.circle(28, -44, 2);
@@ -180,34 +131,32 @@ class CharacterController {
   baseX: number;
   baseY: number;
   isPlayer: boolean;
+  /** Target alpha while idle. Tweened toward by update() for smooth fades. */
+  idleAlpha: number;
   private state: AnimState = 'idle';
   private stateTimer = 0;
   private idleTimer: number;
   private onComplete?: () => void;
   private hurtOverlay: Graphics;
 
-  constructor(isPlayer: boolean, x: number, y: number) {
+  constructor(isPlayer: boolean, idleAlpha: number) {
     this.isPlayer = isPlayer;
-    this.baseX = x;
-    this.baseY = y;
-    this.idleTimer = Math.random() * Math.PI * 2; // randomize idle phase
+    this.idleAlpha = idleAlpha;
+    this.baseX = 0;
+    this.baseY = 0;
+    this.idleTimer = Math.random() * Math.PI * 2;
     this.container = new Container();
-    this.container.x = x;
-    this.container.y = y;
-    this.container.alpha = 0.85;
+    this.container.alpha = idleAlpha;
 
-    // Draw character (slightly larger for visibility)
     const body = new Graphics();
     if (isPlayer) {
       drawWizard(body);
     } else {
       drawGoblin(body);
-      this.container.scale.x = -1; // face left
     }
     body.scale.set(1.15);
     this.container.addChild(body);
 
-    // Hurt flash overlay (red rectangle covering character bounds)
     this.hurtOverlay = new Graphics();
     this.hurtOverlay.rect(-25, -85, 50, 90);
     this.hurtOverlay.fill({ color: 0xff0000 });
@@ -231,7 +180,7 @@ class CharacterController {
   reset() {
     this.state = 'idle';
     this.stateTimer = 0;
-    this.container.alpha = 0.85;
+    this.container.alpha = this.idleAlpha;
     this.container.x = this.baseX;
     this.container.y = this.baseY;
     this.container.rotation = 0;
@@ -246,19 +195,24 @@ class CharacterController {
       case 'idle': {
         this.container.y = this.baseY + Math.sin(this.idleTimer) * 3;
         this.container.rotation = 0;
+        // Smooth tween toward idleAlpha when it changes externally
+        const diff = this.idleAlpha - this.container.alpha;
+        if (Math.abs(diff) > 0.005) {
+          this.container.alpha += diff * 0.08;
+        } else {
+          this.container.alpha = this.idleAlpha;
+        }
         break;
       }
       case 'attack': {
-        const duration = 25; // ~417ms at 60fps
+        const duration = 25;
         const progress = Math.min(1, this.stateTimer / duration);
         const dir = this.isPlayer ? 1 : -1;
         if (progress < 0.35) {
-          // Lunge forward
           const p = progress / 0.35;
           this.container.x = this.baseX + dir * 55 * easeOutQuad(p);
           this.container.alpha = 0.85 + 0.15 * p;
         } else if (progress < 1) {
-          // Return
           const p = (progress - 0.35) / 0.65;
           this.container.x = this.baseX + dir * 55 * (1 - easeOutQuad(p));
           this.container.alpha = 1 - 0.15 * easeOutQuad(p);
@@ -268,13 +222,11 @@ class CharacterController {
         break;
       }
       case 'hurt': {
-        const duration = 20; // ~333ms
+        const duration = 20;
         const progress = Math.min(1, this.stateTimer / duration);
         if (progress < 1) {
-          // Shake
           const shake = Math.sin(progress * Math.PI * 8) * 6 * (1 - progress);
           this.container.x = this.baseX + shake;
-          // Red flash
           this.hurtOverlay.alpha = 0.35 * (1 - progress);
         } else {
           this.container.x = this.baseX;
@@ -284,7 +236,7 @@ class CharacterController {
         break;
       }
       case 'death': {
-        const duration = 45; // ~750ms
+        const duration = 45;
         const progress = Math.min(1, this.stateTimer / duration);
         if (progress < 1) {
           const tiltDir = this.isPlayer ? -1 : 1;
@@ -300,7 +252,6 @@ class CharacterController {
         break;
       }
       case 'dead':
-        // Stay invisible
         break;
     }
   }
@@ -309,7 +260,8 @@ class CharacterController {
     this.state = nextState;
     this.stateTimer = 0;
     this.container.x = this.baseX;
-    this.container.alpha = 0.85;
+    // Leave alpha at the combat-end value; update()'s idle tween will fade
+    // it smoothly toward idleAlpha.
     this.hurtOverlay.alpha = 0;
     this.container.rotation = 0;
     this.onComplete?.();
@@ -356,7 +308,6 @@ class DamageNumberManager {
       n.text.y += n.vy * dt;
       n.vy *= 0.97;
       n.life -= dt;
-      // Fade out in last 15 frames
       n.text.alpha = Math.min(1, n.life / 15);
       if (n.life <= 0) {
         this.container.removeChild(n.text);
@@ -396,38 +347,76 @@ export function BattleOverlay() {
   const playerRef = useRef<CharacterController | null>(null);
   const enemyRef = useRef<CharacterController | null>(null);
   const dmgRef = useRef<DamageNumberManager | null>(null);
+  const scaleRef = useRef(1);
   const processingRef = useRef(false);
   const queueRef = useRef<CombatEvent[]>([]);
 
-  // Initialize PixiJS application
+  // Initialize PixiJS application + resize observer
   useEffect(() => {
     let destroyed = false;
+    let resizeObs: ResizeObserver | null = null;
     const app = new Application();
 
     app.init({
-      width: BOARD_PX,
-      height: BOARD_PX,
+      width: REFERENCE_SIZE,
+      height: REFERENCE_SIZE,
       backgroundAlpha: 0,
       antialias: true,
     }).then(() => {
       if (destroyed) { app.destroy(true); return; }
       appRef.current = app;
       containerRef.current?.appendChild(app.canvas);
+      // Make canvas fill its container; renderer.resize() drives the bitmap size.
+      app.canvas.style.width = '100%';
+      app.canvas.style.height = '100%';
 
-      // Position characters at bottom-left and bottom-right of board
-      const player = new CharacterController(true, 75, BOARD_PX - 35);
-      const enemy = new CharacterController(false, BOARD_PX - 75, BOARD_PX - 35);
+      const initialPhase = useGameStore.getState().phase;
+      const player = new CharacterController(
+        true,
+        initialPhase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT,
+      );
+      const enemy = new CharacterController(false, GOBLIN_ALPHA);
       app.stage.addChild(player.container);
       app.stage.addChild(enemy.container);
       playerRef.current = player;
       enemyRef.current = enemy;
 
-      // Damage number layer (on top of characters)
       const dmg = new DamageNumberManager();
       app.stage.addChild(dmg.container);
       dmgRef.current = dmg;
 
-      // Per-frame update
+      const updateLayout = (size: number) => {
+        if (size <= 0) return;
+        const scale = size / REFERENCE_SIZE;
+        scaleRef.current = scale;
+        app.renderer.resize(size, size);
+
+        player.baseX = PLAYER_BASE_X * scale;
+        player.baseY = size - CHAR_BASE_Y_OFFSET * scale;
+        player.container.x = player.baseX;
+        player.container.y = player.baseY;
+        player.container.scale.set(scale, scale);
+
+        enemy.baseX = ENEMY_BASE_X * scale;
+        enemy.baseY = size - CHAR_BASE_Y_OFFSET * scale;
+        enemy.container.x = enemy.baseX;
+        enemy.container.y = enemy.baseY;
+        enemy.container.scale.set(-scale, scale); // flip horizontally to face left
+      };
+
+      const parent = containerRef.current?.parentElement;
+      if (parent) {
+        const rect = parent.getBoundingClientRect();
+        updateLayout(rect.width || REFERENCE_SIZE);
+        resizeObs = new ResizeObserver(entries => {
+          const w = entries[0]?.contentRect.width;
+          if (w) updateLayout(w);
+        });
+        resizeObs.observe(parent);
+      } else {
+        updateLayout(REFERENCE_SIZE);
+      }
+
       app.ticker.add((ticker) => {
         player.update(ticker.deltaTime);
         enemy.update(ticker.deltaTime);
@@ -437,21 +426,27 @@ export function BattleOverlay() {
 
     return () => {
       destroyed = true;
+      resizeObs?.disconnect();
       appRef.current?.destroy(true);
       appRef.current = null;
     };
   }, []);
 
-  // Subscribe to game store for combat events, tile clicks, and game restarts
+  // Subscribe to game store: combat events, tile-place sound, restart, phase fades
   useEffect(() => {
     let prevPendingCount = useGameStore.getState().pendingTiles.length;
 
     const unsub = useGameStore.subscribe((state, prev) => {
-      // Tile placement sound
       if (state.pendingTiles.length > prevPendingCount) {
         soundManager.play('tileClick');
       }
       prevPendingCount = state.pendingTiles.length;
+
+      // Phase change → fade wizard target. The update() loop tweens smoothly.
+      if (state.phase !== prev.phase && playerRef.current) {
+        playerRef.current.idleAlpha =
+          state.phase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT;
+      }
 
       // Game restart — reset characters
       if (
@@ -499,8 +494,15 @@ export function BattleOverlay() {
     const dmg = dmgRef.current;
     if (!player || !enemy) return;
 
-    // Play sound
     playSoundForEvent(event.type);
+
+    // While a combat event is processing for the player, briefly restore full
+    // alpha so the attack/hurt animations are clearly visible even if the
+    // idleAlpha is currently low (we're still in 'enemy_turn' during enemy_hurt
+    // so this is mostly a defensive measure).
+    if (event.type === 'player_attack' || event.type === 'player_hurt') {
+      player.idleAlpha = WIZARD_ALPHA_COMBAT;
+    }
 
     switch (event.type) {
       case 'player_attack':
@@ -509,7 +511,7 @@ export function BattleOverlay() {
       case 'enemy_hurt':
         await enemy.play('hurt');
         if (dmg && event.damage) {
-          dmg.spawn(event.damage, BOARD_PX - 75, BOARD_PX - 110);
+          dmg.spawn(event.damage, enemy.baseX, enemy.baseY - 75 * scaleRef.current);
         }
         break;
       case 'enemy_attack':
@@ -518,7 +520,7 @@ export function BattleOverlay() {
       case 'player_hurt':
         await player.play('hurt');
         if (dmg && event.damage) {
-          dmg.spawn(event.damage, 75, BOARD_PX - 110);
+          dmg.spawn(event.damage, player.baseX, player.baseY - 75 * scaleRef.current);
         }
         break;
       case 'enemy_death':
@@ -527,6 +529,13 @@ export function BattleOverlay() {
       case 'player_death':
         await player.play('death');
         break;
+    }
+
+    // After player combat events resolve, re-evaluate the fade target.
+    if ((event.type === 'player_attack' || event.type === 'player_hurt') && playerRef.current) {
+      const currentPhase = useGameStore.getState().phase;
+      playerRef.current.idleAlpha =
+        currentPhase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT;
     }
   }
 
@@ -537,8 +546,8 @@ export function BattleOverlay() {
         position: 'absolute',
         top: 0,
         left: 0,
-        width: BOARD_PX,
-        height: BOARD_PX,
+        width: '100%',
+        height: '100%',
         pointerEvents: 'none',
         zIndex: 10,
       }}
