@@ -7,28 +7,23 @@ import { CombatHUD } from './CombatHUD.tsx';
 import { ActionBar } from './ActionBar.tsx';
 import { BattleOverlay } from '../combat/BattleOverlay.tsx';
 import { FeedbackButton } from './FeedbackButton.tsx';
-import type { EnemyState } from '../store/gameStore.ts';
-
-// Chapter 1, Fight 1: Simple enemy for MVP
-const TUTORIAL_ENEMY: EnemyState = {
-  name: 'Ink Goblin',
-  maxHp: 80,
-  hp: 80,
-  attack: 8,
-  defense: 0,
-};
+import { EnemyAppearToast } from './EnemyAppearToast.tsx';
+import { ENEMY_CATALOG } from '../types/enemies.ts';
 
 export function Game() {
   const phase = useGameStore(s => s.phase);
+  const enemyIndex = useGameStore(s => s.enemyIndex);
   const initGame = useGameStore(s => s.initGame);
+  const nextEnemy = useGameStore(s => s.nextEnemy);
   const enemyTurn = useGameStore(s => s.enemyTurn);
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
+
   // Load dictionary on mount
   useEffect(() => {
     loadDictionary().then(() => {
       setDictionaryLoaded(true);
-      initGame(TUTORIAL_ENEMY);
+      initGame(0);
     });
   }, []);
 
@@ -44,8 +39,14 @@ export function Game() {
   }, [phase, enemyTurn, drawTiles]);
 
   const handleRestart = useCallback(() => {
-    initGame(TUTORIAL_ENEMY);
+    initGame(0);
   }, [initGame]);
+
+  const handleNext = useCallback(() => {
+    nextEnemy();
+  }, [nextEnemy]);
+
+  const isFinalEnemy = enemyIndex >= ENEMY_CATALOG.length - 1;
 
   return (
     <div
@@ -130,32 +131,56 @@ export function Game() {
                 margin: '0 0 16px',
               }}
             >
-              {phase === 'victory' ? 'VICTORY!' : 'DEFEATED'}
+              {phase === 'victory'
+                ? isFinalEnemy ? 'CAMPAIGN COMPLETE!' : 'VICTORY!'
+                : 'DEFEATED'}
             </h2>
             <p style={{ color: '#aaa', margin: '0 0 24px' }}>
               {phase === 'victory'
-                ? 'The enemy has been vanquished by your words!'
+                ? isFinalEnemy
+                  ? 'You have vanquished every foe with your words.'
+                  : 'The enemy has been vanquished. A new challenger approaches…'
                 : 'Your words were not strong enough...'}
             </p>
-            <button
-              onClick={handleRestart}
-              style={{
-                padding: '12px 32px',
-                fontSize: 18,
-                fontWeight: 'bold',
-                backgroundColor: '#ff9800',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-              }}
-            >
-              Play Again
-            </button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              {phase === 'victory' && !isFinalEnemy && (
+                <button
+                  onClick={handleNext}
+                  style={{
+                    padding: '12px 28px',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    backgroundColor: '#4caf50',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Next Enemy
+                </button>
+              )}
+              <button
+                onClick={handleRestart}
+                style={{
+                  padding: '12px 28px',
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  backgroundColor: phase === 'victory' && !isFinalEnemy ? '#3a3a5c' : '#ff9800',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                }}
+              >
+                {phase === 'victory' && !isFinalEnemy ? 'Restart' : 'Play Again'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      <EnemyAppearToast />
       <FeedbackButton />
     </div>
   );

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { BoardCell, Tile, CombatEvent, Direction } from '../types/index.ts';
 import { BOARD_SIZE, RACK_SIZE } from '../types/index.ts';
+import { ENEMY_CATALOG } from '../types/enemies.ts';
+import type { EnemyType } from '../types/enemies.ts';
 import { saveDispute } from '../beta/feedbackService.ts';
 
 function genEventId(): string {
@@ -15,11 +17,14 @@ import type { ScoreBreakdown } from '../engine/ScoreCalculator.ts';
 export type GamePhase = 'loading' | 'playing' | 'enemy_turn' | 'victory' | 'defeat';
 
 export interface EnemyState {
+  type: EnemyType;
   name: string;
   maxHp: number;
   hp: number;
   attack: number;
   defense: number;
+  spriteUrl: string;
+  tagline: string;
 }
 
 interface PendingTile {
@@ -48,6 +53,11 @@ export interface GameState {
 
   // Enemy
   enemy: EnemyState | null;
+  enemyIndex: number;
+  /** Timestamp of the most recent enemy-spawn event. Toast component watches
+   *  this to fire the volatile "A wild X appears!" notice without baking the
+   *  message into the long-lived `message` field (which would expand the HUD). */
+  enemyAppearAt: number;
 
   // Turn state
   phase: GamePhase;
@@ -66,7 +76,8 @@ export interface GameState {
   lastRejection: RejectionContext | null;
 
   // Actions
-  initGame: (enemy: EnemyState) => void;
+  initGame: (enemyIndex?: number) => void;
+  nextEnemy: () => void;
   setDictionaryLoaded: (loaded: boolean) => void;
   placePendingTile: (tile: Tile, row: number, col: number) => boolean;
   tapPlaceTile: (tile: Tile) => boolean;
@@ -90,6 +101,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerAttack: 0,
   playerDefense: 0,
   enemy: null,
+  enemyIndex: 0,
+  enemyAppearAt: 0,
   phase: 'loading',
   turnNumber: 1,
   pendingTiles: [],
@@ -99,7 +112,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   dictionaryLoaded: false,
   lastRejection: null,
 
-  initGame: (enemy: EnemyState) => {
+  initGame: (enemyIndex = 0) => {
+    const idx = Math.max(0, Math.min(ENEMY_CATALOG.length - 1, enemyIndex));
+    const def = ENEMY_CATALOG[idx];
+    const enemy: EnemyState = {
+      type: def.type,
+      name: def.name,
+      maxHp: def.maxHp,
+      hp: def.maxHp,
+      attack: def.attack,
+      defense: def.defense,
+      spriteUrl: def.spriteUrl,
+      tagline: def.tagline,
+    };
     const tileBag = new TileBag();
     const rack = tileBag.draw(RACK_SIZE);
     set({
@@ -111,14 +136,27 @@ export const useGameStore = create<GameState>((set, get) => ({
       playerAttack: 0,
       playerDefense: 0,
       enemy,
+      enemyIndex: idx,
+      enemyAppearAt: Date.now(),
       phase: 'playing',
       turnNumber: 1,
       pendingTiles: [],
       lastScore: null,
       combatEvents: [],
       lastRejection: null,
-      message: `A wild ${enemy.name} appears! Spell words to attack!`,
+      message: 'Your turn — spell a word!',
     });
+  },
+
+  nextEnemy: () => {
+    const current = get().enemyIndex;
+    const next = current + 1;
+    if (next >= ENEMY_CATALOG.length) {
+      // Already at last enemy. Loop back to start.
+      get().initGame(0);
+    } else {
+      get().initGame(next);
+    }
   },
 
   setDictionaryLoaded: (loaded: boolean) => set({ dictionaryLoaded: loaded }),

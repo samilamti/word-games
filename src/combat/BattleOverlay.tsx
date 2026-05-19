@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import type { CombatEvent } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 import { soundManager } from '../audio/SoundManager.ts';
+import { ENEMY_CATALOG } from '../types/enemies.ts';
 
 // Reference canvas size at which character positions and sprite scales were
 // designed. Real canvas size now tracks the rendered GameBoard (responsive
@@ -75,7 +76,8 @@ function drawWizard(g: Graphics) {
   g.fill(0xaaeeff);
 }
 
-function drawGoblin(g: Graphics) {
+// Fallback vector goblin — only used if the sprite texture fails to load.
+function drawGoblinFallback(g: Graphics) {
   drawShadow(g);
   g.roundRect(-16, -38, 32, 38, 4);
   g.fill(0x7a5535);
@@ -138,8 +140,9 @@ class CharacterController {
   private idleTimer: number;
   private onComplete?: () => void;
   private hurtOverlay: Graphics;
+  private body: Container;
 
-  constructor(isPlayer: boolean, idleAlpha: number) {
+  constructor(isPlayer: boolean, idleAlpha: number, body: Container) {
     this.isPlayer = isPlayer;
     this.idleAlpha = idleAlpha;
     this.baseX = 0;
@@ -148,13 +151,7 @@ class CharacterController {
     this.container = new Container();
     this.container.alpha = idleAlpha;
 
-    const body = new Graphics();
-    if (isPlayer) {
-      drawWizard(body);
-    } else {
-      drawGoblin(body);
-    }
-    body.scale.set(1.15);
+    this.body = body;
     this.container.addChild(body);
 
     this.hurtOverlay = new Graphics();
@@ -162,6 +159,20 @@ class CharacterController {
     this.hurtOverlay.fill({ color: 0xff0000 });
     this.hurtOverlay.alpha = 0;
     this.container.addChild(this.hurtOverlay);
+  }
+
+  /** Swap out the visible body (e.g. when a new enemy spawns). Animation
+   *  state resets to idle. */
+  swapBody(newBody: Container) {
+    this.container.removeChild(this.body);
+    this.body.destroy({ children: true });
+    this.body = newBody;
+    // Insert below the hurt overlay so red flashes still cover the new sprite.
+    this.container.addChildAt(newBody, 0);
+    this.state = 'idle';
+    this.stateTimer = 0;
+    this.container.rotation = 0;
+    this.hurtOverlay.alpha = 0;
   }
 
   play(anim: AnimState): Promise<void> {
@@ -339,6 +350,35 @@ function playSoundForEvent(type: CombatEvent['type']) {
   }
 }
 
+// ─── Body builders (player Graphics, enemy Sprite) ───
+
+function buildPlayerBody(): Container {
+  const g = new Graphics();
+  drawWizard(g);
+  g.scale.set(1.15);
+  return g;
+}
+
+/** Wrap a Blender-rendered enemy PNG as a Sprite with anchor pinned to the
+ *  feet so it lines up with the container's origin (same convention as the
+ *  Graphics-based bodies, which draw the shadow at y≈0). */
+function buildEnemySpriteBody(texture: Texture): Container {
+  const sprite = new Sprite(texture);
+  sprite.anchor.set(0.5, 0.95);
+  // The rendered character occupies roughly 80% of the 1024px tall PNG; the
+  // remaining margin is transparent space. Scale to make the visible figure
+  // roughly the same height as the original Graphics goblin (~85 design px).
+  sprite.scale.set(0.105);
+  return sprite;
+}
+
+function buildEnemyFallbackBody(): Container {
+  const g = new Graphics();
+  drawGoblinFallback(g);
+  g.scale.set(1.15);
+  return g;
+}
+
 // ─── React Component ───
 
 export function BattleOverlay() {
@@ -351,18 +391,29 @@ export function BattleOverlay() {
   const processingRef = useRef(false);
   const queueRef = useRef<CombatEvent[]>([]);
 
-  // Initialize PixiJS application + resize observer
+  // Initialize PixiJS application + resize observer + enemy sprite preload
   useEffect(() => {
     let destroyed = false;
     let resizeObs: ResizeObserver | null = null;
     const app = new Application();
 
-    app.init({
-      width: REFERENCE_SIZE,
-      height: REFERENCE_SIZE,
-      backgroundAlpha: 0,
-      antialias: true,
-    }).then(() => {
+    (async () => {
+      // Preload all enemy textures so swapping mid-game is instant. If the
+      // load fails (e.g. file missing during dev), we fall back to the
+      // vector goblin in buildEnemyFallbackBody.
+      try {
+        await Assets.load(ENEMY_CATALOG.map(e => e.spriteUrl));
+      } catch (err) {
+        console.warn('[BattleOverlay] enemy texture preload failed:', err);
+      }
+      if (destroyed) return;
+
+      await app.init({
+        width: REFERENCE_SIZE,
+        height: REFERENCE_SIZE,
+        backgroundAlpha: 0,
+        antialias: true,
+      });
       if (destroyed) { app.destroy(true); return; }
       appRef.current = app;
       containerRef.current?.appendChild(app.canvas);
@@ -370,12 +421,27 @@ export function BattleOverlay() {
       app.canvas.style.width = '100%';
       app.canvas.style.height = '100%';
 
-      const initialPhase = useGameStore.getState().phase;
+      const state = useGameStore.getState();
+      const initialPhase = state.phase;
       const player = new CharacterController(
         true,
         initialPhase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT,
+        buildPlayerBody(),
       );
-      const enemy = new CharacterController(false, GOBLIN_ALPHA);
+
+      // Pick the right sprite for the current enemy (or fallback to vectors).
+      const enemyBody = (() => {
+        const enemyDef = state.enemy;
+        if (!enemyDef) return buildEnemyFallbackBody();
+        try {
+          const tex = Texture.from(enemyDef.spriteUrl);
+          if (!tex || tex === Texture.EMPTY) return buildEnemyFallbackBody();
+          return buildEnemySpriteBody(tex);
+        } catch {
+          return buildEnemyFallbackBody();
+        }
+      })();
+      const enemy = new CharacterController(false, GOBLIN_ALPHA, enemyBody);
       app.stage.addChild(player.container);
       app.stage.addChild(enemy.container);
       playerRef.current = player;
@@ -422,7 +488,7 @@ export function BattleOverlay() {
         enemy.update(ticker.deltaTime);
         dmg.update(ticker.deltaTime);
       });
-    });
+    })();
 
     return () => {
       destroyed = true;
@@ -446,6 +512,25 @@ export function BattleOverlay() {
       if (state.phase !== prev.phase && playerRef.current) {
         playerRef.current.idleAlpha =
           state.phase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT;
+      }
+
+      // Enemy swap (new monster spawned via nextEnemy / restart) — rebuild
+      // the enemy body from its sprite. Type comparison handles both initial
+      // load and progression.
+      if (
+        state.enemy &&
+        state.enemy.type !== prev.enemy?.type &&
+        enemyRef.current
+      ) {
+        try {
+          const tex = Texture.from(state.enemy.spriteUrl);
+          const body = (tex && tex !== Texture.EMPTY)
+            ? buildEnemySpriteBody(tex)
+            : buildEnemyFallbackBody();
+          enemyRef.current.swapBody(body);
+        } catch {
+          enemyRef.current.swapBody(buildEnemyFallbackBody());
+        }
       }
 
       // Game restart — reset characters
