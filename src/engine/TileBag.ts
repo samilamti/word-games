@@ -1,5 +1,5 @@
 import type { Tile } from '../types/index.ts';
-import { LETTER_DISTRIBUTION, WILD_TILE_COUNT } from '../types/index.ts';
+import type { LocaleDef } from '../i18n/locales.ts';
 
 let nextTileId = 1;
 
@@ -21,18 +21,20 @@ export function createTile(letter: string, pointValue: number, isWild = false): 
 
 export class TileBag {
   private tiles: Tile[] = [];
+  readonly locale: LocaleDef;
 
-  constructor() {
+  constructor(locale: LocaleDef) {
+    this.locale = locale;
     this.fill();
   }
 
   private fill(): void {
-    for (const def of LETTER_DISTRIBUTION) {
+    for (const def of this.locale.letters) {
       for (let i = 0; i < def.count; i++) {
         this.tiles.push(createTile(def.letter, def.points));
       }
     }
-    for (let i = 0; i < WILD_TILE_COUNT; i++) {
+    for (let i = 0; i < this.locale.wildCount; i++) {
       this.tiles.push(createTile('*', 0, true));
     }
     this.shuffle();

@@ -8,27 +8,37 @@ import { ActionBar } from './ActionBar.tsx';
 import { BattleOverlay } from '../combat/BattleOverlay.tsx';
 import { FeedbackButton } from './FeedbackButton.tsx';
 import { LeaderboardButton } from './LeaderboardButton.tsx';
+import { LanguagePicker } from './LanguagePicker.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 export function Game() {
   const phase = useGameStore(s => s.phase);
   const enemyIndex = useGameStore(s => s.enemyIndex);
+  const locale = useGameStore(s => s.locale);
   const initGame = useGameStore(s => s.initGame);
   const nextEnemy = useGameStore(s => s.nextEnemy);
   const enemyTurn = useGameStore(s => s.enemyTurn);
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
   const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
+  const ui = useUI();
 
-  // Load dictionary on mount
+  // Load dictionary on mount AND whenever the locale changes. WordValidator
+  // returns the existing instance fast when the locale is unchanged, so
+  // calls during enemy progression don't re-fetch unnecessarily.
   useEffect(() => {
-    loadDictionary().then(() => {
+    setDictionaryLoaded(false);
+    loadDictionary(locale).then(() => {
       setDictionaryLoaded(true);
-      initGame(0);
+      // Only init on the very first load. Subsequent locale switches handle
+      // their own re-init via setLocale -> initGame.
+      if (enemyIndex === 0 && phase === 'loading') initGame(0);
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   // Record the run to the leaderboard when the player wins. We dedupe by
   // enemyAppearAt timestamp so a single victory only emits one entry even
@@ -107,7 +117,7 @@ export function Game() {
           letterSpacing: 2,
         }}
       >
-        LEXICA KNIGHTS
+        {ui.appTitle}
       </h1>
 
       <div
@@ -167,15 +177,15 @@ export function Game() {
               }}
             >
               {phase === 'victory'
-                ? isFinalEnemy ? 'CAMPAIGN COMPLETE!' : 'VICTORY!'
-                : 'DEFEATED'}
+                ? isFinalEnemy ? ui.campaignComplete : ui.victory
+                : ui.defeated}
             </h2>
             <p style={{ color: '#aaa', margin: '0 0 24px' }}>
               {phase === 'victory'
                 ? isFinalEnemy
-                  ? 'You have vanquished every foe with your words.'
-                  : 'The enemy has been vanquished. A new challenger approaches…'
-                : 'Your words were not strong enough...'}
+                  ? ui.victoryFinalBody
+                  : ui.victoryBody
+                : ui.defeatedBody}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               {phase === 'victory' && !isFinalEnemy && (
@@ -192,7 +202,7 @@ export function Game() {
                     cursor: 'pointer',
                   }}
                 >
-                  Next Enemy
+                  {ui.nextEnemy}
                 </button>
               )}
               <button
@@ -208,7 +218,7 @@ export function Game() {
                   cursor: 'pointer',
                 }}
               >
-                {phase === 'victory' && !isFinalEnemy ? 'Restart' : 'Play Again'}
+                {phase === 'victory' && !isFinalEnemy ? ui.restart : ui.playAgain}
               </button>
             </div>
           </div>
@@ -218,6 +228,7 @@ export function Game() {
       <EnemyAppearToast />
       <FeedbackButton />
       <LeaderboardButton />
+      <LanguagePicker />
     </div>
   );
 }

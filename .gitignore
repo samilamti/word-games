@@ -24,6 +24,9 @@ ios/capacitor-cordova-ios-plugins/
 # ASC API automation state (resource IDs, build numbers, etc.)
 build/
 
+# Raw dictionary downloads — normalized output goes into public/dictionaries/
+tmp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

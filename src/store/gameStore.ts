@@ -4,6 +4,8 @@ import { BOARD_SIZE, RACK_SIZE } from '../types/index.ts';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import type { EnemyType } from '../types/enemies.ts';
 import { saveDispute } from '../beta/feedbackService.ts';
+import { LOCALES, detectLocale, getStoredLocale, setStoredLocale } from '../i18n/locales.ts';
+import type { LocaleCode } from '../i18n/locales.ts';
 
 function genEventId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -69,6 +71,9 @@ export interface GameState {
   // Game Center sign-in)
   playerAlias: string | null;
 
+  // Current language (drives tile distribution + dictionary + UI strings)
+  locale: LocaleCode;
+
   // Turn state
   phase: GamePhase;
   turnNumber: number;
@@ -90,6 +95,7 @@ export interface GameState {
   nextEnemy: () => void;
   setDictionaryLoaded: (loaded: boolean) => void;
   setPlayerAlias: (alias: string | null) => void;
+  setLocale: (locale: LocaleCode) => void;
   placePendingTile: (tile: Tile, row: number, col: number) => boolean;
   tapPlaceTile: (tile: Tile) => boolean;
   removePendingTile: (row: number, col: number) => void;
@@ -103,9 +109,11 @@ export interface GameState {
   consumeCombatEvent: (id: string) => void;
 }
 
+const initialLocale: LocaleCode = getStoredLocale() ?? detectLocale();
+
 export const useGameStore = create<GameState>((set, get) => ({
   grid: createEmptyBoard(),
-  tileBag: new TileBag(),
+  tileBag: new TileBag(LOCALES[initialLocale]),
   rack: [],
   playerHp: 100,
   playerMaxHp: 100,
@@ -118,6 +126,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   runHighestHit: 0,
   runLongestWord: '',
   playerAlias: null,
+  locale: initialLocale,
   phase: 'loading',
   turnNumber: 1,
   pendingTiles: [],
@@ -140,7 +149,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       spriteUrl: def.spriteUrl,
       tagline: def.tagline,
     };
-    const tileBag = new TileBag();
+    const tileBag = new TileBag(LOCALES[get().locale]);
     const rack = tileBag.draw(RACK_SIZE);
     set({
       grid: createEmptyBoard(),
@@ -180,6 +189,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   setDictionaryLoaded: (loaded: boolean) => set({ dictionaryLoaded: loaded }),
 
   setPlayerAlias: (alias: string | null) => set({ playerAlias: alias }),
+
+  setLocale: (locale: LocaleCode) => {
+    if (locale === get().locale) return;
+    setStoredLocale(locale);
+    set({ locale });
+    // Restart the campaign in the new language: reseed the tile bag with
+    // that locale's distribution and reload the dictionary. The Game
+    // component effect on `locale` triggers the dictionary fetch.
+    get().initGame(0);
+  },
 
   placePendingTile: (tile: Tile, row: number, col: number) => {
     const { grid, pendingTiles, rack, phase } = get();
@@ -425,7 +444,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const { formedWords, placedCells, word } = lastRejection;
 
-    // Save dispute to storage
+    // Save dispute to storage AND add to the per-locale accepted-words list
+    // so the same word counts as valid in all future games (the email-via-
+    // Web3Forms continues to notify the developer for curation/inclusion
+    // in the next bundled dictionary refresh).
     saveDispute({
       id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       word,
@@ -433,6 +455,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       timestamp: Date.now(),
       turnNumber,
     });
+    getValidator().acceptWord(word);
+    // Also accept every other word in the placement, since they were all
+    // implicitly accepted by the dispute resolution.
+    for (const fw of formedWords) {
+      getValidator().acceptWord(fw.text);
+    }
 
     // Calculate damage as if the word was valid
     const score = calculatePlacementDamage(grid, formedWords, placedCells);
