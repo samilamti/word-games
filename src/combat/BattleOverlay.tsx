@@ -16,11 +16,12 @@ const PLAYER_BASE_X = 55;
 const ENEMY_BASE_X = REFERENCE_SIZE - 55;
 const CHAR_BASE_Y_OFFSET = 25; // pixels above the bottom edge
 
-// Wizard alpha targets — used to fade the hero out during tile placement so
-// it doesn't obscure the bottom-left tiles, and bring it back into combat.
-const WIZARD_ALPHA_PLAYING = 0.22;
-const WIZARD_ALPHA_COMBAT = 0.9;
-const GOBLIN_ALPHA = 0.9;
+// Character alphas. The wizard used to fade during 'playing' so he wouldn't
+// cover the bottom-left tiles, but now that HP bars float above the heads and
+// the HUD is slim, the user wants the hero at full opacity in every phase.
+const WIZARD_ALPHA_PLAYING = 1;
+const WIZARD_ALPHA_COMBAT = 1;
+const GOBLIN_ALPHA = 1;
 
 // ─── Easing ───
 
@@ -574,7 +575,9 @@ export function BattleOverlay() {
 
       // Floating HP bars — children of the stage (not the character containers)
       // so they stay at a fixed on-screen size regardless of character scale.
-      const playerHpBar = new HpBar({ isPlayer: true, showName: false, showStats: false });
+      // Player bar shows the Game Center alias above the bar when available
+      // (empty string while not yet authenticated — Text takes no space then).
+      const playerHpBar = new HpBar({ isPlayer: true, showName: true, showStats: false });
       const enemyHpBar = new HpBar({ isPlayer: false, showName: true, showStats: true });
       app.stage.addChild(playerHpBar.container);
       app.stage.addChild(enemyHpBar.container);
@@ -583,7 +586,7 @@ export function BattleOverlay() {
 
       // Seed bars from current state
       const initialEnemy = state.enemy;
-      playerHpBar.update(state.playerHp, state.playerMaxHp, '', '');
+      playerHpBar.update(state.playerHp, state.playerMaxHp, state.playerAlias ?? '', '');
       if (initialEnemy) {
         enemyHpBar.update(
           initialEnemy.hp,
@@ -672,9 +675,20 @@ export function BattleOverlay() {
           state.phase === 'playing' ? WIZARD_ALPHA_PLAYING : WIZARD_ALPHA_COMBAT;
       }
 
-      // Keep floating HP bars in sync with store state.
-      if (state.playerHp !== prev.playerHp || state.playerMaxHp !== prev.playerMaxHp) {
-        playerHpBarRef.current?.update(state.playerHp, state.playerMaxHp, '', '');
+      // Keep floating HP bars in sync with store state. Player bar also
+      // tracks the Game Center alias which lands asynchronously after GC
+      // authentication completes.
+      if (
+        state.playerHp !== prev.playerHp ||
+        state.playerMaxHp !== prev.playerMaxHp ||
+        state.playerAlias !== prev.playerAlias
+      ) {
+        playerHpBarRef.current?.update(
+          state.playerHp,
+          state.playerMaxHp,
+          state.playerAlias ?? '',
+          '',
+        );
       }
       if (state.enemy && (
         state.enemy.hp !== prev.enemy?.hp ||

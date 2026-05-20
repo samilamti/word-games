@@ -64,6 +64,11 @@ export interface GameState {
   runHighestHit: number;
   runLongestWord: string;
 
+  // Game Center identity (set after GKLocalPlayer.authenticate succeeds in
+  // the native build; remains null on web and when the user declines
+  // Game Center sign-in)
+  playerAlias: string | null;
+
   // Turn state
   phase: GamePhase;
   turnNumber: number;
@@ -84,6 +89,7 @@ export interface GameState {
   initGame: (enemyIndex?: number) => void;
   nextEnemy: () => void;
   setDictionaryLoaded: (loaded: boolean) => void;
+  setPlayerAlias: (alias: string | null) => void;
   placePendingTile: (tile: Tile, row: number, col: number) => boolean;
   tapPlaceTile: (tile: Tile) => boolean;
   removePendingTile: (row: number, col: number) => void;
@@ -111,6 +117,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   runDamageTotal: 0,
   runHighestHit: 0,
   runLongestWord: '',
+  playerAlias: null,
   phase: 'loading',
   turnNumber: 1,
   pendingTiles: [],
@@ -171,6 +178,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setDictionaryLoaded: (loaded: boolean) => set({ dictionaryLoaded: loaded }),
+
+  setPlayerAlias: (alias: string | null) => set({ playerAlias: alias }),
 
   placePendingTile: (tile: Tile, row: number, col: number) => {
     const { grid, pendingTiles, rack, phase } = get();

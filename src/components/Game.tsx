@@ -51,6 +51,17 @@ export function Game() {
     });
   }, [phase]);
 
+  // Snap scroll back to the top whenever a new enemy spawns. After the
+  // victory overlay closes the page can be left scrolled down (lastScore
+  // breakdown made the HUD taller, the score is then cleared, and the
+  // browser's scroll position lingers below the board). Force the board
+  // back into view so the "A wild X appears!" toast lands centered in
+  // what the player is looking at.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [enemyIndex]);
+
   // Handle enemy turn with delay
   useEffect(() => {
     if (phase === 'enemy_turn') {
