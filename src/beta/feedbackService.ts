@@ -1,8 +1,7 @@
 import type { WordDispute, BetaFeedback } from '../types/index.ts';
 
-// Set this to your server endpoint to enable remote storage.
-// Leave empty to only use localStorage.
-const FEEDBACK_API_URL = '';
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY;
+const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 
 const DISPUTES_KEY = 'lexica_knights_disputes';
 const FEEDBACK_KEY = 'lexica_knights_feedback';
@@ -22,12 +21,18 @@ function appendToArray<T>(key: string, item: T): void {
   localStorage.setItem(key, JSON.stringify(arr));
 }
 
-function postToRemote(path: string, payload: unknown): void {
-  if (!FEEDBACK_API_URL) return;
-  fetch(`${FEEDBACK_API_URL}${path}`, {
+function emailViaWeb3Forms(subject: string, fields: Record<string, unknown>): void {
+  if (!WEB3FORMS_KEY) return;
+  fetch(WEB3FORMS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      access_key: WEB3FORMS_KEY,
+      subject,
+      from_name: 'Lexica Knights Beta',
+      botcheck: '',
+      ...fields,
+    }),
   }).catch(() => {
     // Fire-and-forget: don't block the game on network errors
   });
@@ -35,12 +40,18 @@ function postToRemote(path: string, payload: unknown): void {
 
 export function saveDispute(dispute: WordDispute): void {
   appendToArray(DISPUTES_KEY, dispute);
-  postToRemote('/disputes', dispute);
+  emailViaWeb3Forms(`[Lexica Knights] Word dispute: ${dispute.word}`, {
+    ...dispute,
+    timestamp_iso: new Date(dispute.timestamp).toISOString(),
+  });
 }
 
 export function saveFeedback(feedback: BetaFeedback): void {
   appendToArray(FEEDBACK_KEY, feedback);
-  postToRemote('/feedback', feedback);
+  emailViaWeb3Forms(`[Lexica Knights] Feedback: ${feedback.category}`, {
+    ...feedback,
+    timestamp_iso: new Date(feedback.timestamp).toISOString(),
+  });
 }
 
 export function getDisputes(): WordDispute[] {
