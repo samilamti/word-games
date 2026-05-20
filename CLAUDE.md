@@ -1,52 +1,79 @@
-# Lexica Knights - Word Combat RPG
+# Lexica Knights — Word Combat RPG
 
-## Tech Stack
-- Vite + React 19 + TypeScript + Zustand (state management)
-- DOM-based rendering (PixiJS planned for later phases)
-- Dev server: `npx vite --port 5188`
+Multi-language tile-based word combat game shipping to iOS App Store (TestFlight as of build 7) and the web.
 
-## Project Structure
-- `src/types/index.ts` — All shared types, constants, tile distribution, board layout
-- `src/engine/` — Pure logic: BoardState, WordValidator, TileBag, ScoreCalculator
-- `src/store/gameStore.ts` — Zustand store with full game state and actions
-- `src/components/` — React UI: Game, GameBoard, TileRack, CombatHUD, ActionBar, FeedbackButton, DisputeDialog
-- `src/beta/` — Beta feedback: feedbackService (localStorage + optional remote POST)
-- `src/combat/` — Combat visuals: BattleOverlay (PixiJS character animations, damage floaters)
-- `src/audio/` — Sound management: SoundManager
+## Tech stack
+
+- Vite 7 + React 19 + TypeScript 5.9 + Zustand 5
+- PixiJS 8 for combat overlay (characters, HP bars, damage numbers)
+- Capacitor 8 (Swift Package Manager) for iOS native shell
+- Blender 5 for procedural enemy renders (run via `--background --python`)
+- Web Audio API for procedural sound effects
+- Custom App Store Connect REST API client in `scripts/asc/` (ES256 JWT, Node 24 `--env-file`)
+- Web3Forms transport for beta feedback (set `VITE_WEB3FORMS_KEY` to enable; empty = localStorage only)
 
 ## Commands
-- `npx tsc -b` — TypeScript check (strict mode, unused vars are errors)
-- `npx vite --port 5188` — Dev server
-- `npm run build` — Production build (tsc + vite build → `dist/`)
-- `npx vite preview` — Preview production build locally
 
-## Build & Deploy
-- GitHub Pages via `.github/workflows/deploy.yml` — auto-deploys on push to `main`
-- `vite.config.ts` uses `base: './'` for relative asset paths (works on any subpath)
-- Build output goes to `dist/` (gitignored)
+- `npm run dev` — Vite dev (port 5188)
+- `npm run build` — `tsc -b && vite build` → `dist/`
+- `npm run ios:build` — `CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync ios`
+- `npm run ios:open` — open Xcode workspace
+- `npm run ios:assets` — rasterize SVG → PNG + `npx capacitor-assets generate --ios`
+- `npx tsc -b` — TypeScript check only
 
-## Key Gotchas
-- Windows: use `cmd /c npx ...` in launch.json runtimeExecutable (bare `npx` causes ENOENT)
-- Vite returns HTML with 200 for missing static files — always check content-type header
-- Dictionary: fetches `/dictionary.txt`, falls back to built-in 2,582-word list in WordValidator.ts
-- Window debug exposure requires double cast: `(window as unknown as Record<string, unknown>)`
+## Key directories
 
-## Game Design
-- 13x13 board with premium squares (DL, TL, DW, TW, GEM_FORGE, VOID, CENTER)
-- Turn-based combat: spell words → deal damage → enemy counterattacks → refill tiles
-- Damage = SUM(tile_values) × word_length_multiplier × COMBAT_SCALAR(3)
-- Planned mechanics: INSERT (inject letters mid-word), BRANCH/Fork (additive word branching)
+- `src/i18n/` — 6 LocaleDef bundles (tile distribution + UI strings + dict URL), per-locale accepted-words list, `useUI()` hook
+- `src/engine/` — Pure logic: `BoardState`, `WordValidator` (Set-based, locale-aware), `ScoreCalculator`, `TileBag` (takes a `LocaleDef`)
+- `src/store/gameStore.ts` — Zustand store: game state, run stats, current locale, Game Center alias, enemy progression
+- `src/components/` — React UI including `LanguagePicker`, `LeaderboardButton`, `LeaderboardModal`, `EnemyAppearToast`
+- `src/combat/BattleOverlay.tsx` — PixiJS app with `CharacterController`, `HpBar`, `DamageNumberManager`, ResizeObserver-driven responsive canvas
+- `src/leaderboard/leaderboard.ts` — Local per-device run records
+- `src/native/init.ts` — StatusBar / SplashScreen / Game Center auth / Haptics
+- `ios/App/App/GameCenterPlugin.swift` — Custom CAPBridgedPlugin wrapping `GKLocalPlayer.authenticateHandler`
+- `public/enemies/*.png` — Blender-rendered chibi sprites (1024×1024, transparent BG)
+- `public/dictionaries/*.txt` — 6 word lists, 3.3M words total (iOS bundle ships only `en.txt`; others fetched on demand from GitHub Pages)
+- `scripts/asc/` — App Store Connect API automation (bundle ID, app metadata, age rating, build attach, encryption, screenshots)
+- `scripts/blender/render_enemies.py` — Procedural Blender script for all 5 enemies
+- `scripts/normalize-dictionaries.mjs` — Raw word lists → clean per-locale text files
+- `scripts/strip-non-en-dicts.mjs` — Post-build hook to keep only `en.txt` in the iOS bundle
 
-## Implementation Status
-- Phase 1 DONE: Board, rack, drag+tap tile placement, word validation, combat loop
-- Beta features DONE: Feedback button, word dispute system (localStorage + remote POST)
-- Deployment DONE: GitHub Pages via Actions workflow
-- Phase 2 TODO: INSERT and BRANCH mechanics
-- Phase 3 TODO: Gems, status effects, enemy AI
-- Phase 4 TODO: Campaign Chapter 1 (5 enemies + boss, treasures, RPG progression)
+## Key gotchas
 
-## Beta Feedback System
-- `src/beta/feedbackService.ts` — Set `FEEDBACK_API_URL` to enable remote POST (empty = localStorage only)
-- localStorage keys: `lexica_knights_disputes`, `lexica_knights_feedback`
-- Word disputes: when a word is rejected, player can dispute it → word is accepted, scored, and dispute is stored for review
-- `disputeWord()` in gameStore replays the scoring path, skipping dictionary validation
+- **iOS HTML5 drag/drop doesn't work from touch.** TileRack uses pointer events with a 6px threshold to distinguish tap from drag. Board cells expose `data-cell-row` / `data-cell-col` attrs for `elementFromPoint` hit-testing.
+- **Set, not Trie, for the dictionary.** A Trie at 1M+ entries (German) was prohibitively memory-heavy on mobile. Set lookup is O(1) average; per-locale `loadDictionary(locale)` is coalesced and falls back to a CDN URL when the local file is missing.
+- **PixiJS 8 + Capacitor 8** uses Swift Package Manager (no CocoaPods, no `.xcworkspace`). Custom plugins added directly to the App target are picked up at runtime via Objective-C runtime discovery — see `GameCenterPlugin.swift` and the four manual injections in `project.pbxproj`.
+- **First archive after adding a new capability** needs an explicit `-authenticationKeyPath` flag, not just `-authenticationKeyID`. Provisioning profile auto-discovery via the canonical `.p8` location works for steady-state but not the initial fetch with a new entitlement. Delete cached profiles at `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` if a profile mismatch persists.
+- **HP bars float above characters as PixiJS children of `app.stage`** (NOT the character containers) so they stay at constant on-screen size regardless of responsive board scaling. X is clamped to canvas bounds.
+- **Wild-toast animation uses CSS keyframes + `key={enemyAppearAt}` to force re-mount.** React `useState`-based timing had a bug where the toast never showed — pure CSS keyframes with `forwards` is simpler and reliable.
+- **Vite returns HTML 200 for missing static files** — `WordValidator.loadDictionary` checks `content-type` to distinguish a real dictionary fetch from a SPA fallback page.
+- **Window debug exposure** uses double cast: `(window as unknown as Record<string, unknown>).__store = useGameStore`.
+- **The `Defaults.properties` altool transient error** sometimes fires on the FIRST upload after a chained build. Just retry the `xcrun altool --upload-app` command; second run typically succeeds.
+- **CocoaPods 1.16 + Ruby 4.0 crashes** without `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. We use SPM so this only matters if someone re-introduces CocoaPods.
+
+## App Store Connect notes
+
+- Bundle ID: `com.samixavierlamti.lexiconquest` → resource id `99822XJB2Y` (Universal)
+- ASC app id: `6765603467` ("Lexica Knights")
+- Categories: primary `GAMES` with subcategories `GAMES_PUZZLE` (primary), `GAMES_STRATEGY` (secondary). **There's no `GAMES_WORD`** — Apple consolidated taxonomy.
+- Capabilities enabled on App ID: `IN_APP_PURCHASE` (default), `GAME_CENTER` (added in v6)
+- Age rating profile: `violenceCartoonOrFantasy=INFREQUENT_OR_MILD`, everything else `NONE` / `false` → 9+
+- Encryption: `usesNonExemptEncryption=false` (HTTPS via WKWebView is exempt)
+- Privacy declaration in App Store Connect web UI must include the Web3Forms feedback transmission when `VITE_WEB3FORMS_KEY` is set in production
+
+## Storage keys (localStorage)
+
+- `lexica_knights_disputes` — dispute submissions (mirror of what Web3Forms emails)
+- `lexica_knights_feedback` — beta feedback submissions
+- `lexica_knights_runs` — leaderboard entries (capped at 50)
+- `lexica_knights_locale` — current language code
+- `lexica_knights_accepted_words_<locale>` — per-locale dispute-accepted words
+
+## Game design
+
+- 13×13 board with premium squares (DL, TL, DW, TW, GEM_FORGE, VOID, CENTER ★)
+- Turn-based combat: spell word → deal damage → enemy counterattacks → refill tiles → repeat
+- Damage = `SUM(tile values) × word_length_multiplier × COMBAT_SCALAR(3)`
+- 5-enemy campaign with stats curve (HP 80 → 240, ATK 8 → 18)
+- Per-locale tile distributions and point values follow Wikipedia Scrabble standards
+- Planned mechanics (TODO): INSERT (inject letters mid-word), BRANCH (perpendicular word branching), gem effects, status effects
