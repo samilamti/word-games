@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Generate Social Preview</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: system-ui;
+    color: #eee;
+  }
+  canvas { border: 1px solid #333; max-width: 100%; }
+  button {
+    margin-top: 16px;
+    padding: 12px 32px;
+    font-size: 16px;
+    background: #ffd54f;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #status { margin-top: 8px; color: #888; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="640"></canvas>
+<button onclick="download()">Download PNG</button>
+<div id="status">Rendering...</div>
+
+<script>
+const W = 1280, H = 640;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+
+// ─── Colors ───
+const BG1 = '#0d0d1a';
+const BG2 = '#1a1a3e';
+const BOARD_BG = '#0a0a18';
+const CELL_STD = '#2d2d44';
+const BORDER = '#3a3a5c';
+
+const PREM_COLORS = {
+  tw: '#c62828', dw: '#d81b8a', tl: '#1565c0', dl: '#6fb8d8',
+  gf: '#43a047', void: '#0d0d1a', center: '#ffc107', standard: CELL_STD
+};
+const PREM_LABELS = { tw:'TW', dw:'DW', tl:'TL', dl:'DL', gf:'GF', center:'\u2605' };
+
+const TIER_COLORS = {
+  common: ['#faebd7','#e8d5b0'],
+  uncommon: ['#c8e6c9','#a8d4aa'],
+  rare: ['#bbdefb','#94c4e8'],
+  legendary: ['#e1bee7','#c8a0d0']
+};
+
+// ─── Board Data ───
+const premiums = {};
+function addP(type, positions) {
+  for (const [r,c] of positions) premiums[`${r},${c}`] = type;
+}
+addP('center', [[6,6]]);
+addP('tw', [[0,0],[0,6],[0,12],[6,0],[6,12],[12,0],[12,6],[12,12]]);
+addP('dw', [[1,1],[1,11],[2,2],[2,10],[3,3],[3,9],[4,4],[4,8],[8,4],[8,8],[9,3],[9,9],[10,2],[10,10],[11,1],[11,11]]);
+addP('tl', [[1,5],[1,7],[5,1],[5,5],[5,7],[5,11],[7,1],[7,5],[7,7],[7,11],[11,5],[11,7]]);
+addP('dl', [[0,3],[0,9],[2,6],[3,0],[3,6],[3,12],[6,2],[6,4],[6,8],[6,10],[9,0],[9,6],[9,12],[10,6],[12,3],[12,9]]);
+addP('gf', [[2,4],[2,8],[10,4],[10,8]]);
+addP('void', [[4,0],[4,12],[8,0],[8,12]]);
+
+const tiles = {};
+[
+  // LEXICA — across row 6
+  {r:6,c:3,l:'L',p:1,t:'common'},
+  {r:6,c:4,l:'E',p:1,t:'common'},
+  {r:6,c:5,l:'X',p:2.5,t:'rare'},
+  {r:6,c:6,l:'I',p:1,t:'common',shared:true},
+  {r:6,c:7,l:'C',p:1.5,t:'uncommon'},
+  {r:6,c:8,l:'A',p:1,t:'common'},
+  // KNIGHTS — down col 6, crossing LEXICA at the center 'I'
+  {r:4,c:6,l:'K',p:4,t:'legendary'},
+  {r:5,c:6,l:'N',p:1,t:'common'},
+  {r:7,c:6,l:'G',p:1.5,t:'uncommon'},
+  {r:8,c:6,l:'H',p:1.5,t:'uncommon'},
+  {r:9,c:6,l:'T',p:1,t:'common'},
+  {r:10,c:6,l:'S',p:1,t:'common'},
+].forEach(t => tiles[`${t.r},${t.c}`] = t);
+
+// ─── Helpers ───
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ─── Draw Background ───
+function drawBackground() {
+  // Radial gradient
+  const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 500);
+  g.addColorStop(0, BG2);
+  g.addColorStop(1, BG1);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle board glow
+  const glow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 350);
+  glow.addColorStop(0, 'rgba(255,213,79,0.07)');
+  glow.addColorStop(0.5, 'rgba(255,152,0,0.03)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ─── Draw Board ───
+function drawBoard() {
+  const CELL = 38;
+  const GAP = 2;
+  const PAD = 6;
+  const boardW = 13 * CELL + 12 * GAP + PAD * 2;
+  const boardH = boardW;
+
+  // Center the board
+  const bx = (W - boardW) / 2;
+  const by = (H - boardH) / 2;
+
+  // Board background with shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 8;
+  roundRect(bx, by, boardW, boardH, 8);
+  ctx.fillStyle = BOARD_BG;
+  ctx.fill();
+  ctx.restore();
+
+  // Board border
+  roundRect(bx, by, boardW, boardH, 8);
+  ctx.strokeStyle = BORDER;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw cells
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const key = `${r},${c}`;
+      const prem = premiums[key] || 'standard';
+      const cx = bx + PAD + c * (CELL + GAP);
+      const cy = by + PAD + r * (CELL + GAP);
+
+      // Cell background
+      roundRect(cx, cy, CELL, CELL, 3);
+      ctx.fillStyle = PREM_COLORS[prem];
+      ctx.fill();
+
+      // Tile?
+      const td = tiles[key];
+      if (td) {
+        drawTile(cx + 1, cy + 1, CELL - 2, td);
+      } else {
+        // Premium label
+        const label = PREM_LABELS[prem];
+        if (label) {
+          ctx.fillStyle = prem === 'center' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.35)';
+          ctx.font = `bold 8px 'Segoe UI', system-ui`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, cx + CELL/2, cy + CELL/2);
+        }
+      }
+    }
+  }
+}
+
+function drawTile(x, y, size, td) {
+  const colors = TIER_COLORS[td.t];
+
+  // Tile shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 2;
+
+  // Tile body gradient
+  const tg = ctx.createLinearGradient(x, y, x + size, y + size);
+  tg.addColorStop(0, colors[0]);
+  tg.addColorStop(1, colors[1]);
+  roundRect(x, y, size, size, 4);
+  ctx.fillStyle = tg;
+  ctx.fill();
+  ctx.restore();
+
+  // Border
+  roundRect(x, y, size, size, 4);
+  ctx.strokeStyle = td.shared ? '#ff9800' : '#8d6e63';
+  ctx.lineWidth = td.shared ? 2.5 : 2;
+  ctx.stroke();
+
+  // Shared glow
+  if (td.shared) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,152,0,0.5)';
+    ctx.shadowBlur = 8;
+    roundRect(x, y, size, size, 4);
+    ctx.strokeStyle = 'rgba(255,152,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Inner highlight
+  const hl = ctx.createLinearGradient(x, y, x, y + size * 0.4);
+  hl.addColorStop(0, 'rgba(255,255,255,0.3)');
+  hl.addColorStop(1, 'rgba(255,255,255,0)');
+  roundRect(x + 2, y + 1, size - 4, size * 0.4, 2);
+  ctx.fillStyle = hl;
+  ctx.fill();
+
+  // Letter
+  ctx.fillStyle = '#1a1a2e';
+  ctx.font = `800 20px 'Segoe UI', system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(td.l, x + size/2, y + size/2 - 1);
+
+  // Point value
+  ctx.fillStyle = '#5d4037';
+  ctx.font = `700 8px 'Segoe UI', system-ui`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(String(td.p), x + size - 3, y + size - 2);
+}
+
+// ─── Draw Veil ───
+function drawVeil() {
+  const g = ctx.createRadialGradient(W/2, H*0.44, 100, W/2, H/2, 500);
+  g.addColorStop(0, 'rgba(10,10,24,0.15)');
+  g.addColorStop(1, 'rgba(10,10,24,0.6)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ─── Draw 3D Title ───
+function drawTitle() {
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  // "LEXICA" line
+  const y1 = H * 0.38;
+  const y2 = H * 0.58;
+
+  // 3D depth layers
+  const depthColors = [
+    '#805a09','#7a5508','#744f07','#6e4a06','#684505',
+    '#624004','#5c3b03','#563602','#503101','#4a2c00'
+  ];
+
+  // Draw "LEXICA" 3D depth
+  ctx.font = `900 80px 'Segoe UI', system-ui`;
+  ctx.letterSpacing = '6px';
+  for (let i = depthColors.length - 1; i >= 0; i--) {
+    ctx.fillStyle = depthColors[i];
+    ctx.fillText('LEXICA', W/2, y1 + i + 1);
+  }
+
+  // Draw "LEXICA" face with gradient
+  const lg1 = ctx.createLinearGradient(0, y1 - 36, 0, y1 + 10);
+  lg1.addColorStop(0, '#ffe082');
+  lg1.addColorStop(0.4, '#ffd54f');
+  lg1.addColorStop(1, '#ffb300');
+  ctx.fillStyle = lg1;
+  ctx.fillText('LEXICA', W/2, y1);
+
+  // Glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,213,79,0.35)';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = 'rgba(255,213,79,0.08)';
+  ctx.fillText('LEXICA', W/2, y1);
+  ctx.restore();
+
+  // Draw "KNIGHTS" 3D depth
+  ctx.font = `900 90px 'Segoe UI', system-ui`;
+  ctx.letterSpacing = '3px';
+  for (let i = depthColors.length - 1; i >= 0; i--) {
+    ctx.fillStyle = depthColors[i];
+    ctx.fillText('KNIGHTS', W/2, y2 + i + 1);
+  }
+
+  // Draw "KNIGHTS" face with gradient
+  const lg2 = ctx.createLinearGradient(0, y2 - 44, 0, y2 + 10);
+  lg2.addColorStop(0, '#ffe082');
+  lg2.addColorStop(0.4, '#ffd54f');
+  lg2.addColorStop(1, '#ff9800');
+  ctx.fillStyle = lg2;
+  ctx.fillText('KNIGHTS', W/2, y2);
+
+  // Glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,213,79,0.35)';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = 'rgba(255,213,79,0.08)';
+  ctx.fillText('KNIGHTS', W/2, y2);
+  ctx.restore();
+
+  // Subtitle
+  ctx.font = `600 20px 'Segoe UI', system-ui`;
+  ctx.letterSpacing = '8px';
+  ctx.fillStyle = '#b8b8d0';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 8;
+  ctx.fillText('WORD  COMBAT  RPG', W/2, H * 0.72);
+
+  // Tagline
+  ctx.font = `400 13px 'Segoe UI', system-ui`;
+  ctx.letterSpacing = '3px';
+  ctx.fillStyle = '#7777aa';
+  ctx.shadowBlur = 4;
+  ctx.fillText('Spell Words.  Deal Damage.  Conquer.', W/2, H * 0.79);
+
+  ctx.restore();
+}
+
+// ─── Floating tiles ───
+function drawFloatingTiles() {
+  const floats = [
+    {x:30,y:35,l:'R',t:'common',rot:-0.26,op:0.2},
+    {x:1200,y:30,l:'W',t:'uncommon',rot:0.2,op:0.17},
+    {x:1205,y:565,l:'Z',t:'legendary',rot:0.3,op:0.2},
+    {x:35,y:570,l:'P',t:'uncommon',rot:0.14,op:0.17},
+    {x:1140,y:290,l:'V',t:'rare',rot:-0.17,op:0.13},
+    {x:95,y:285,l:'A',t:'common',rot:0.1,op:0.12},
+  ];
+
+  for (const f of floats) {
+    ctx.save();
+    ctx.globalAlpha = f.op;
+    ctx.translate(f.x + 24, f.y + 24);
+    ctx.rotate(f.rot);
+    const colors = TIER_COLORS[f.t];
+    const tg = ctx.createLinearGradient(-24, -24, 24, 24);
+    tg.addColorStop(0, colors[0]);
+    tg.addColorStop(1, colors[1]);
+    roundRect(-24, -24, 48, 48, 6);
+    ctx.fillStyle = tg;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(141,110,99,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.font = `800 24px 'Segoe UI', system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(f.l, 0, 0);
+    ctx.restore();
+  }
+}
+
+// ─── Damage floaters ───
+function drawDamageFloaters() {
+  ctx.save();
+  // -24
+  ctx.globalAlpha = 0.55;
+  ctx.font = `900 30px 'Segoe UI', system-ui`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ef5350';
+  ctx.shadowColor = 'rgba(239,83,80,0.4)';
+  ctx.shadowBlur = 10;
+  ctx.save();
+  ctx.translate(1100, 155);
+  ctx.rotate(-0.14);
+  ctx.fillText('-24', 0, 0);
+  ctx.restore();
+  // +12
+  ctx.fillStyle = '#66bb6a';
+  ctx.shadowColor = 'rgba(102,187,106,0.4)';
+  ctx.font = `900 22px 'Segoe UI', system-ui`;
+  ctx.globalAlpha = 0.45;
+  ctx.save();
+  ctx.translate(115, 145);
+  ctx.rotate(0.08);
+  ctx.fillText('+12', 0, 0);
+  ctx.restore();
+  // -8
+  ctx.fillStyle = '#ef5350';
+  ctx.shadowColor = 'rgba(239,83,80,0.3)';
+  ctx.font = `900 18px 'Segoe UI', system-ui`;
+  ctx.globalAlpha = 0.35;
+  ctx.save();
+  ctx.translate(1050, 510);
+  ctx.rotate(0.15);
+  ctx.fillText('-8', 0, 0);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ─── Accent lines ───
+function drawAccentLines() {
+  for (const y of [78, H - 78]) {
+    const g = ctx.createLinearGradient(200, 0, 1080, 0);
+    g.addColorStop(0, 'transparent');
+    g.addColorStop(0.3, 'rgba(255,213,79,0.2)');
+    g.addColorStop(0.7, 'rgba(255,213,79,0.2)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(200, y, 880, 1);
+  }
+}
+
+// ─── Render All ───
+drawBackground();
+drawFloatingTiles();
+drawBoard();
+drawVeil();
+drawAccentLines();
+drawDamageFloaters();
+drawTitle();
+
+document.getElementById('status').textContent = 'Done! Click to download.';
+
+function download() {
+  const a = document.createElement('a');
+  a.download = 'social-preview.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>

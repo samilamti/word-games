@@ -1,9 +1,9 @@
 /**
- * After `vite build` for the iOS bundle, delete non-English dictionaries
- * from dist/dictionaries/ so they don't get copied into the .ipa via
- * `cap sync ios`. At runtime the WordValidator falls back to fetching
- * non-EN dictionaries from the GitHub Pages CDN URL — this implements
- * the user's "Hybrid: EN bundled, others on demand" preference.
+ * After `vite build` for the iOS bundle, strip web-only assets from dist/
+ * so they don't get copied into the .ipa via `cap sync ios`:
+ *   - non-English dictionaries (runtime fetches them from the GitHub Pages
+ *     CDN URL instead — the "Hybrid: EN bundled, others on demand" preference)
+ *   - social-preview.png (an OG card only crawlers on the web build need)
  */
 
 import { existsSync, readdirSync, unlinkSync } from 'node:fs';
@@ -33,3 +33,10 @@ for (const file of readdirSync(dictDir)) {
   }
 }
 console.log(`[strip-non-en-dicts] kept ${kept}, removed ${removed}`);
+
+// Web-only OG social card — not needed inside the app bundle.
+const ogCard = resolve(root, 'dist/social-preview.png');
+if (existsSync(ogCard)) {
+  unlinkSync(ogCard);
+  console.log('[strip-non-en-dicts] removed dist/social-preview.png (web-only OG card)');
+}
