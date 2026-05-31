@@ -27,6 +27,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_WEB3FORMS_KEY: ${{ secrets.WEB3FORMS_ACCESS_KEY }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

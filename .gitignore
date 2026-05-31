@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment files with secrets (ASC API key, Web3Forms key, etc.)
+# .env.local is already covered by *.local; these guard a future plain .env too
+.env
+.env.*
+!.env.example
+
 # iOS / Capacitor
 ios/App/Pods/
 ios/App/build/
