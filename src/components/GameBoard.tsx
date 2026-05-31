@@ -52,6 +52,8 @@ function Cell({ cell, isPending, onClick }: CellProps) {
 
   const isVoid = cell.premiumType === 'VOID';
   const hasTile = cell.tile !== null;
+  // Tiles the NPC committed are flagged with ownerId 'enemy' (see enemyTurn).
+  const isEnemy = hasTile && cell.tile!.ownerId === 'enemy';
 
   let bgColor = '#2d2d44';
   if (isVoid) {
@@ -63,9 +65,11 @@ function Cell({ cell, isPending, onClick }: CellProps) {
   const tileBg = hasTile
     ? isPending
       ? '#fff3e0'
-      : getTierForPoints(cell.tile!.pointValue) === 'common'
-        ? '#f5e6c8'
-        : TIER_COLORS[getTierForPoints(cell.tile!.pointValue)]
+      : isEnemy
+        ? '#3f3a6e'
+        : getTierForPoints(cell.tile!.pointValue) === 'common'
+          ? '#f5e6c8'
+          : TIER_COLORS[getTierForPoints(cell.tile!.pointValue)]
     : undefined;
 
   // Drop targets: empty, non-void cells. The TileRack uses elementFromPoint +
@@ -81,7 +85,11 @@ function Cell({ cell, isPending, onClick }: CellProps) {
         width: 'var(--tile-size)',
         height: 'var(--tile-size)',
         backgroundColor: hasTile ? tileBg : bgColor,
-        border: isPending ? '2px solid #ff9800' : '1px solid #3a3a5c',
+        border: isPending
+          ? '2px solid #ff9800'
+          : isEnemy
+            ? '2px solid #7e6bd6'
+            : '1px solid #3a3a5c',
         borderRadius: 3,
         display: 'flex',
         alignItems: 'center',
@@ -90,7 +98,7 @@ function Cell({ cell, isPending, onClick }: CellProps) {
         position: 'relative',
         fontSize: hasTile ? 'calc(var(--tile-size) * 0.55)' : 'calc(var(--tile-size) * 0.28)',
         fontWeight: hasTile ? 'bold' : 'normal',
-        color: hasTile ? '#1a1a2e' : '#8888aa',
+        color: hasTile ? (isEnemy ? '#ede9ff' : '#1a1a2e') : '#8888aa',
         userSelect: 'none',
         boxSizing: 'border-box',
       }}
@@ -105,7 +113,7 @@ function Cell({ cell, isPending, onClick }: CellProps) {
               bottom: 1,
               right: 3,
               fontSize: 'calc(var(--tile-size) * 0.26)',
-              color: '#666',
+              color: isEnemy ? '#b9aef0' : '#666',
             }}
           >
             {cell.tile!.pointValue}

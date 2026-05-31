@@ -45,6 +45,14 @@ export interface UIStrings {
   dispute: string;
   noTilesInRack: string;
   invalidWord: string;
+  exchange: string;
+  confirmExchange: string; // {n}
+  pass: string;
+  cancel: string;
+  tilesSwapped: string; // {n}
+  passedTurn: string;
+  enemyPlays: string; // {name}, {word}, {n}
+  enemyForfeits: string; // {name}
 }
 
 export interface LocaleDef {
@@ -119,6 +127,14 @@ const EN: LocaleDef = {
     dispute: 'Dispute!',
     noTilesInRack: 'No tiles in rack',
     invalidWord: 'is not a valid word',
+    exchange: 'Exchange',
+    confirmExchange: 'Confirm Exchange ({n})',
+    pass: 'Pass',
+    cancel: 'Cancel',
+    tilesSwapped: 'Swapped {n} tiles. Enemy\'s turn!',
+    passedTurn: 'You passed your turn. Enemy\'s turn!',
+    enemyPlays: '{name} plays {word} for {n}!',
+    enemyForfeits: '{name} reshuffles its hand.',
   },
 };
 
@@ -185,6 +201,14 @@ const ES: LocaleDef = {
     dispute: '¡Disputar!',
     noTilesInRack: 'Sin fichas en el atril',
     invalidWord: 'no es una palabra válida',
+    exchange: 'Cambiar',
+    confirmExchange: 'Confirmar cambio ({n})',
+    pass: 'Pasar',
+    cancel: 'Cancelar',
+    tilesSwapped: 'Cambiaste {n} fichas. ¡Turno del enemigo!',
+    passedTurn: 'Pasaste tu turno. ¡Turno del enemigo!',
+    enemyPlays: '¡{name} juega {word} por {n}!',
+    enemyForfeits: '{name} baraja sus fichas de nuevo.',
   },
 };
 
@@ -249,6 +273,14 @@ const FR: LocaleDef = {
     dispute: 'Contester !',
     noTilesInRack: 'Aucun jeton sur le chevalet',
     invalidWord: 'n\'est pas un mot valide',
+    exchange: 'Échanger',
+    confirmExchange: 'Confirmer l\'échange ({n})',
+    pass: 'Passer',
+    cancel: 'Annuler',
+    tilesSwapped: '{n} jetons échangés. Au tour de l\'ennemi !',
+    passedTurn: 'Tu as passé ton tour. Au tour de l\'ennemi !',
+    enemyPlays: '{name} joue {word} pour {n} !',
+    enemyForfeits: '{name} rebrasse sa main.',
   },
 };
 
@@ -316,6 +348,14 @@ const DE: LocaleDef = {
     dispute: 'Anfechten!',
     noTilesInRack: 'Keine Steine im Halter',
     invalidWord: 'ist kein gültiges Wort',
+    exchange: 'Tauschen',
+    confirmExchange: 'Tausch bestätigen ({n})',
+    pass: 'Passen',
+    cancel: 'Abbrechen',
+    tilesSwapped: '{n} Steine getauscht. Gegner ist dran!',
+    passedTurn: 'Du hast ausgesetzt. Gegner ist dran!',
+    enemyPlays: '{name} spielt {word} für {n}!',
+    enemyForfeits: '{name} mischt seine Steine neu.',
   },
 };
 
@@ -378,6 +418,14 @@ const PT: LocaleDef = {
     dispute: 'Contestar!',
     noTilesInRack: 'Sem peças no atril',
     invalidWord: 'não é uma palavra válida',
+    exchange: 'Trocar',
+    confirmExchange: 'Confirmar troca ({n})',
+    pass: 'Passar',
+    cancel: 'Cancelar',
+    tilesSwapped: 'Trocaste {n} peças. Vez do inimigo!',
+    passedTurn: 'Passaste a tua vez. Vez do inimigo!',
+    enemyPlays: '{name} joga {word} por {n}!',
+    enemyForfeits: '{name} baralha as suas peças.',
   },
 };
 
@@ -437,6 +485,14 @@ const IT: LocaleDef = {
     dispute: 'Contestare!',
     noTilesInRack: 'Nessuna tessera sul leggio',
     invalidWord: 'non è una parola valida',
+    exchange: 'Scambia',
+    confirmExchange: 'Conferma scambio ({n})',
+    pass: 'Passa',
+    cancel: 'Annulla',
+    tilesSwapped: 'Scambiate {n} tessere. Turno del nemico!',
+    passedTurn: 'Hai passato il turno. Turno del nemico!',
+    enemyPlays: '{name} gioca {word} per {n}!',
+    enemyForfeits: '{name} rimescola le sue tessere.',
   },
 };
 

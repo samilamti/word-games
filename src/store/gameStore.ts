@@ -15,6 +15,7 @@ import { TileBag } from '../engine/TileBag.ts';
 import { getValidator } from '../engine/WordValidator.ts';
 import { calculatePlacementDamage } from '../engine/ScoreCalculator.ts';
 import type { ScoreBreakdown } from '../engine/ScoreCalculator.ts';
+import { findBestNpcMove } from '../engine/NpcWordAI.ts';
 
 export type GamePhase = 'loading' | 'playing' | 'enemy_turn' | 'victory' | 'defeat';
 
@@ -27,6 +28,8 @@ export interface EnemyState {
   defense: number;
   spriteUrl: string;
   tagline: string;
+  damageMultiplier: number;
+  pickRank: number;
 }
 
 interface PendingTile {
@@ -45,6 +48,11 @@ export interface GameState {
   // Board
   grid: BoardCell[][];
   tileBag: TileBag;
+  // NPC opponent's private draw pool + rack. The board is shared (both place
+  // onto `grid`), but the bags are separate so neither side starves the other
+  // and the HUD's "tiles left" stays an honest player resource.
+  npcBag: TileBag;
+  npcRack: Tile[];
 
   // Player
   rack: Tile[];
@@ -81,6 +89,10 @@ export interface GameState {
   lastScore: ScoreBreakdown | null;
   message: string;
 
+  // Tile-exchange selection UI (player forgo/swap)
+  exchangeMode: boolean;
+  selectedForSwap: string[]; // tile ids marked to swap
+
   // Combat animation events
   combatEvents: CombatEvent[];
 
@@ -103,6 +115,9 @@ export interface GameState {
   submitWord: () => { success: boolean; damage: number; error?: string };
   disputeWord: (definition: string) => { success: boolean; damage: number };
   swapTiles: (tilesToSwap: Tile[]) => void;
+  toggleExchangeMode: () => void;
+  toggleSwapSelection: (tileId: string) => void;
+  clearSwapSelection: () => void;
   enemyTurn: () => void;
   drawTiles: () => void;
   setMessage: (msg: string) => void;
@@ -114,6 +129,8 @@ const initialLocale: LocaleCode = getStoredLocale() ?? detectLocale();
 export const useGameStore = create<GameState>((set, get) => ({
   grid: createEmptyBoard(),
   tileBag: new TileBag(LOCALES[initialLocale]),
+  npcBag: new TileBag(LOCALES[initialLocale]),
+  npcRack: [],
   rack: [],
   playerHp: 100,
   playerMaxHp: 100,
@@ -130,6 +147,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   phase: 'loading',
   turnNumber: 1,
   pendingTiles: [],
+  exchangeMode: false,
+  selectedForSwap: [],
   lastScore: null,
   combatEvents: [],
   message: 'Loading dictionary...',
@@ -148,12 +167,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       defense: def.defense,
       spriteUrl: def.spriteUrl,
       tagline: def.tagline,
+      damageMultiplier: def.damageMultiplier,
+      pickRank: def.pickRank,
     };
     const tileBag = new TileBag(LOCALES[get().locale]);
     const rack = tileBag.draw(RACK_SIZE);
+    const npcBag = new TileBag(LOCALES[get().locale]);
+    const npcRack = npcBag.draw(RACK_SIZE);
     set({
       grid: createEmptyBoard(),
       tileBag,
+      npcBag,
+      npcRack,
       rack,
       playerHp: 100,
       playerMaxHp: 100,
@@ -165,6 +190,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       phase: 'playing',
       turnNumber: 1,
       pendingTiles: [],
+      exchangeMode: false,
+      selectedForSwap: [],
       lastScore: null,
       combatEvents: [],
       lastRejection: null,
@@ -509,41 +536,116 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   swapTiles: (tilesToSwap: Tile[]) => {
-    const { rack, tileBag, turnNumber } = get();
+    if (get().phase !== 'playing') return;
+    // Recall any pending tiles first so a swap/pass can never strand tiles on
+    // the board.
+    if (get().pendingTiles.length > 0) get().returnPendingToRack();
+    const { rack, tileBag, turnNumber, locale } = get();
     const remaining = rack.filter(t => !tilesToSwap.some(s => s.id === t.id));
     tileBag.returnTiles(tilesToSwap);
     const newTiles = tileBag.draw(tilesToSwap.length);
+    const ui = LOCALES[locale].ui;
+    const message =
+      tilesToSwap.length === 0
+        ? ui.passedTurn
+        : ui.tilesSwapped.replace('{n}', String(tilesToSwap.length));
     set({
       rack: [...remaining, ...newTiles],
       turnNumber: turnNumber + 1,
-      message: `Swapped ${tilesToSwap.length} tiles. Enemy's turn!`,
+      message,
       phase: 'enemy_turn',
+      exchangeMode: false,
+      selectedForSwap: [],
     });
   },
 
+  toggleExchangeMode: () => {
+    const entering = !get().exchangeMode;
+    // Entering exchange mode recalls pending tiles so tile-selection can't
+    // conflict with in-progress placement.
+    if (entering && get().pendingTiles.length > 0) get().returnPendingToRack();
+    set({ exchangeMode: entering, selectedForSwap: entering ? get().selectedForSwap : [] });
+  },
+
+  toggleSwapSelection: (tileId: string) => {
+    const sel = get().selectedForSwap;
+    set({
+      selectedForSwap: sel.includes(tileId)
+        ? sel.filter(id => id !== tileId)
+        : [...sel, tileId],
+    });
+  },
+
+  clearSwapSelection: () => set({ exchangeMode: false, selectedForSwap: [] }),
+
   enemyTurn: () => {
-    const { enemy, playerHp, playerDefense } = get();
+    // StrictMode / double-timer safety: only act when it's genuinely the
+    // enemy's turn, so a stray second invocation can't double-commit a word.
+    if (get().phase !== 'enemy_turn') return;
+    const { enemy, playerHp, playerDefense, grid, npcRack, npcBag, turnNumber, locale } = get();
     if (!enemy || enemy.hp <= 0) return;
 
-    // Simple enemy attack
-    const rawDamage = enemy.attack + Math.floor(Math.random() * 5);
-    const damage = Math.max(1, rawDamage - playerDefense);
-    const newHp = Math.max(0, playerHp - damage);
+    const ui = LOCALES[locale].ui;
+    const alphabet = LOCALES[locale].letters.map(l => l.letter);
+    const move = findBestNpcMove(grid, npcRack, {
+      pickRank: enemy.pickRank,
+      timeBudgetMs: 120,
+      alphabet,
+    });
 
-    // Build combat animation events
-    const newEvents: CombatEvent[] = [
-      { id: genEventId(), type: 'enemy_attack', timestamp: Date.now() },
-      { id: genEventId(), type: 'player_hurt', damage, timestamp: Date.now() },
-    ];
-    if (newHp <= 0) {
-      newEvents.push({ id: genEventId(), type: 'player_death', timestamp: Date.now() });
+    if (move) {
+      // Commit the NPC's tiles to the shared board.
+      for (const p of move.placedTiles) {
+        p.tile.ownerId = 'enemy';
+        p.tile.turnPlaced = turnNumber;
+        placeTile(grid, p.row, p.col, p.tile);
+      }
+      // Consume premium squares the NPC's word landed on (mirrors submitWord).
+      for (const p of move.placedTiles) {
+        grid[p.row][p.col].premiumUsed = true;
+      }
+
+      // NPC words are worth more than the player's: scale by the per-enemy
+      // difficulty multiplier, then apply player defense as a flat mitigation.
+      const raw = Math.round(move.score.totalDamage * enemy.damageMultiplier);
+      const damage = Math.max(1, raw - playerDefense);
+      const newHp = Math.max(0, playerHp - damage);
+
+      // Remove the used tiles from the NPC rack and refill from its own bag.
+      const usedIds = new Set(move.placedTiles.map(p => p.rackTileId));
+      const keptRack = npcRack.filter(t => !usedIds.has(t.id));
+      const drawn = npcBag.draw(RACK_SIZE - keptRack.length);
+      const newNpcRack = [...keptRack, ...drawn];
+
+      const newEvents: CombatEvent[] = [
+        { id: genEventId(), type: 'enemy_attack', timestamp: Date.now() },
+        { id: genEventId(), type: 'player_hurt', damage, timestamp: Date.now() },
+      ];
+      if (newHp <= 0) {
+        newEvents.push({ id: genEventId(), type: 'player_death', timestamp: Date.now() });
+      }
+
+      set({
+        grid: [...grid.map(r => [...r])],
+        npcRack: newNpcRack,
+        playerHp: newHp,
+        message: ui.enemyPlays
+          .replace('{name}', enemy.name)
+          .replace('{word}', move.mainWord)
+          .replace('{n}', String(damage)),
+        phase: newHp <= 0 ? 'defeat' : 'playing',
+        combatEvents: [...get().combatEvents, ...newEvents],
+      });
+      return;
     }
 
+    // No legal word — forgo the turn: reshuffle the whole rack, deal no damage.
+    npcBag.returnTiles(npcRack);
+    const refreshed = npcBag.draw(RACK_SIZE);
     set({
-      playerHp: newHp,
-      message: `${enemy.name} attacks for ${damage} damage!`,
-      phase: newHp <= 0 ? 'defeat' : 'playing',
-      combatEvents: [...get().combatEvents, ...newEvents],
+      npcRack: refreshed,
+      phase: 'playing',
+      message: ui.enemyForfeits.replace('{name}', enemy.name),
     });
   },
 

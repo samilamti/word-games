@@ -35,9 +35,12 @@ function findDropCell(x: number, y: number): { row: number; col: number } | null
 interface RackTileProps {
   tile: Tile;
   onTap: (tile: Tile) => void;
+  selectable: boolean;
+  selected: boolean;
+  onToggleSelect: (tileId: string) => void;
 }
 
-function RackTile({ tile, onTap }: RackTileProps) {
+function RackTile({ tile, onTap, selectable, selected, onToggleSelect }: RackTileProps) {
   const placePendingTile = useGameStore(s => s.placePendingTile);
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +49,14 @@ function RackTile({ tile, onTap }: RackTileProps) {
       // Ignore right-click / non-primary mouse buttons. Touch and pen pointers
       // report button=0.
       if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      // In exchange mode a press toggles the tile's swap selection — no
+      // drag-to-board and no tap-to-place.
+      if (selectable) {
+        e.preventDefault();
+        onToggleSelect(tile.id);
+        return;
+      }
 
       // Prevent the browser from interpreting the touch as a pan/scroll/zoom
       // gesture mid-drag. Combined with touch-action: none on the element,
@@ -133,7 +144,7 @@ function RackTile({ tile, onTap }: RackTileProps) {
       document.addEventListener('pointerup', onUp);
       document.addEventListener('pointercancel', onCancel);
     },
-    [tile, onTap, placePendingTile],
+    [tile, onTap, placePendingTile, selectable, onToggleSelect],
   );
 
   const tier = getTierForPoints(tile.pointValue);
@@ -146,18 +157,20 @@ function RackTile({ tile, onTap }: RackTileProps) {
         width: 'var(--rack-tile-size)',
         height: 'var(--rack-tile-size)',
         backgroundColor: TIER_COLORS[tier],
-        border: '2px solid #8d6e63',
+        border: selected ? '3px solid #29b6f6' : '2px solid #8d6e63',
         borderRadius: 4,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'grab',
+        cursor: selectable ? 'pointer' : 'grab',
         position: 'relative',
         fontSize: 'calc(var(--rack-tile-size) * 0.46)',
         fontWeight: 'bold',
         color: '#1a1a2e',
         userSelect: 'none',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+        boxShadow: selected ? '0 0 10px rgba(41,182,246,0.7)' : '0 2px 4px rgba(0,0,0,0.3)',
+        transform: selected ? 'translateY(-6px)' : undefined,
+        opacity: selectable && !selected ? 0.55 : 1,
         transition: 'transform 0.1s, opacity 0.1s',
         touchAction: 'none', // critical: lets us own touch gestures
       }}
@@ -182,6 +195,9 @@ export function TileRack() {
   const rack = useGameStore(s => s.rack);
   const phase = useGameStore(s => s.phase);
   const tapPlaceTile = useGameStore(s => s.tapPlaceTile);
+  const exchangeMode = useGameStore(s => s.exchangeMode);
+  const selectedForSwap = useGameStore(s => s.selectedForSwap);
+  const toggleSwapSelection = useGameStore(s => s.toggleSwapSelection);
 
   return (
     <div
@@ -203,7 +219,16 @@ export function TileRack() {
           No tiles in rack
         </div>
       ) : (
-        rack.map(tile => <RackTile key={tile.id} tile={tile} onTap={tapPlaceTile} />)
+        rack.map(tile => (
+          <RackTile
+            key={tile.id}
+            tile={tile}
+            onTap={tapPlaceTile}
+            selectable={exchangeMode}
+            selected={selectedForSwap.includes(tile.id)}
+            onToggleSelect={toggleSwapSelection}
+          />
+        ))
       )}
     </div>
   );
