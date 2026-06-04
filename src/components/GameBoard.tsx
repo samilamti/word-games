@@ -54,6 +54,7 @@ function Cell({ cell, isPending, onClick }: CellProps) {
   const hasTile = cell.tile !== null;
   // Tiles the NPC committed are flagged with ownerId 'enemy' (see enemyTurn).
   const isEnemy = hasTile && cell.tile!.ownerId === 'enemy';
+  const isWild = hasTile && cell.tile!.isWild;
 
   let bgColor = '#2d2d44';
   if (isVoid) {
@@ -106,7 +107,22 @@ function Cell({ cell, isPending, onClick }: CellProps) {
     >
       {hasTile ? (
         <>
-          {cell.tile!.letter}
+          <span style={{ fontStyle: isWild ? 'italic' : 'normal' }}>{cell.tile!.letter}</span>
+          {isWild && (
+            <span
+              aria-label="blank tile"
+              style={{
+                position: 'absolute',
+                top: 1,
+                left: 3,
+                fontSize: 'calc(var(--tile-size) * 0.3)',
+                lineHeight: 1,
+                color: isEnemy ? '#b9aef0' : '#7e6bd6',
+              }}
+            >
+              •
+            </span>
+          )}
           <span
             style={{
               position: 'absolute',
