@@ -48,7 +48,9 @@ export function ActionBar() {
 
   const isPlaying = phase === 'playing';
   const hasPending = pendingTiles.length > 0;
-  const canDispute = isPlaying && lastRejection !== null;
+  // A rejection still showing a blank ('*') can't be a real word — don't offer
+  // to dispute it (it would never resolve to a dictionary entry anyway).
+  const canDispute = isPlaying && lastRejection !== null && !lastRejection.word.includes('*');
 
   return (
     <>

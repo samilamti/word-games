@@ -39,6 +39,9 @@ export class WordValidator {
   /** Record a dispute-accepted word so it's valid in future games. */
   acceptWord(word: string): void {
     if (!this.currentLocale) return;
+    // A word still carrying an unresolved blank ('*') is never a real word —
+    // don't let it pollute the accepted-words list or its persisted storage.
+    if (word.includes('*')) return;
     const norm = word.toLowerCase();
     this.acceptedWords.add(norm);
     addAcceptedWord(this.currentLocale, norm);
