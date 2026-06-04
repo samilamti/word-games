@@ -77,3 +77,4 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - 5-enemy campaign with stats curve (HP 80 → 240, ATK 8 → 18)
 - Per-locale tile distributions and point values follow Wikipedia Scrabble standards
 - Planned mechanics (TODO): INSERT (inject letters mid-word), BRANCH (perpendicular word branching), gem effects, status effects
+- Planned polish (TODO, **after monetization**): **game feel / juice** — enemy tiles drop from the sky with screen rumble + impact SFX. A free *core retention* feature, **not** an IAP (juice belongs in the free demo as conversion fuel, not behind a paywall). Tech is already in place: PixiJS animation + Haptics (rumble) + Web Audio (SFX). Ship with reduce-motion / haptics-off / sound-off toggles for accessibility + low-end Android. Full runbook: `docs/tile-drop-3d-juice-plan.md`.
