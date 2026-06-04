@@ -3,6 +3,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useGameStore } from '../store/gameStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 
 interface GameCenterResult {
   isAuthenticated: boolean;
@@ -54,7 +55,18 @@ export async function initNative(): Promise<void> {
 
 export function triggerHaptic(): void {
   if (!Capacitor.isNativePlatform()) return;
+  if (!useSettingsStore.getState().hapticsEnabled) return;
   Haptics.impact({ style: ImpactStyle.Light }).catch(() => {
+    // Fire-and-forget UX feedback
+  });
+}
+
+/** Heavier "thump" for the enemy tile-drop impact. Native-only, gated on the
+ *  haptics setting. No-ops on web (where Haptics is unavailable anyway). */
+export function triggerRumble(): void {
+  if (!Capacitor.isNativePlatform()) return;
+  if (!useSettingsStore.getState().hapticsEnabled) return;
+  Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {
     // Fire-and-forget UX feedback
   });
 }

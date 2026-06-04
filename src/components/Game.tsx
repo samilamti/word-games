@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { loadDictionary } from '../engine/WordValidator.ts';
 import { GameBoard } from './GameBoard.tsx';
 import { TileRack } from './TileRack.tsx';
@@ -9,10 +10,33 @@ import { BattleOverlay } from '../combat/BattleOverlay.tsx';
 import { FeedbackButton } from './FeedbackButton.tsx';
 import { LeaderboardButton } from './LeaderboardButton.tsx';
 import { LanguagePicker } from './LanguagePicker.tsx';
+import { SettingsButton } from './SettingsButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
+import { soundManager } from '../audio/SoundManager.ts';
+import { triggerRumble } from '../native/init.ts';
 import { useUI } from '../i18n/useUI.ts';
+
+// Tile-drop timing — must mirror index.css .tile-drop-in (340ms duration +
+// 45ms * stagger index). The impact (shake + thud + rumble) fires when the
+// last tile lands; total stays well under the ~600ms feel budget for typical
+// NPC word lengths.
+const DROP_DURATION_MS = 340;
+const DROP_STAGGER_MS = 45;
+const REDUCED_MOTION_DROP_MS = 120;
+
+// Screen-rumble keyframes for the board+characters wrapper, run via the Web
+// Animations API on impact (decaying jitter — a DOM port of the Pixi hurt
+// shake). Restarts cleanly each call without remounting the Pixi canvas.
+const SHAKE_KEYFRAMES: Keyframe[] = [
+  { transform: 'translate(0, 0) rotate(0deg)' },
+  { transform: 'translate(-6px, 4px) rotate(-0.7deg)' },
+  { transform: 'translate(5px, -3px) rotate(0.6deg)' },
+  { transform: 'translate(-4px, 3px) rotate(-0.4deg)' },
+  { transform: 'translate(3px, -2px) rotate(0.2deg)' },
+  { transform: 'translate(0, 0) rotate(0deg)' },
+];
 
 export function Game() {
   const phase = useGameStore(s => s.phase);
@@ -21,9 +45,12 @@ export function Game() {
   const initGame = useGameStore(s => s.initGame);
   const nextEnemy = useGameStore(s => s.nextEnemy);
   const enemyTurn = useGameStore(s => s.enemyTurn);
+  const resolveEnemyAttack = useGameStore(s => s.resolveEnemyAttack);
+  const pendingEnemyTurn = useGameStore(s => s.pendingEnemyTurn);
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
   const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
+  const boardWrapperRef = useRef<HTMLDivElement>(null); // shake target (board + Pixi)
   const ui = useUI();
 
   // Load dictionary on mount AND whenever the locale changes. WordValidator
@@ -83,6 +110,48 @@ export function Game() {
     }
   }, [phase, enemyTurn, drawTiles]);
 
+  // Tile-drop juice controller. enemyTurn() commits the NPC's tiles and stashes
+  // the attack outcome in pendingEnemyTurn (a fresh object per turn — the
+  // reliable trigger here); the tiles tumble in via CSS, and once they've
+  // landed we fire the impact — screen shake + thud + device rumble — then
+  // apply the held-back damage via resolveEnemyAttack(). Sound/haptics self-gate
+  // on their own settings; only the visual shake (and the tumble itself, in
+  // GameBoard) honor reduce-motion.
+  useEffect(() => {
+    if (!pendingEnemyTurn) return;
+    const { grid, lastEnemyDropTurn } = useGameStore.getState();
+    const { reduceMotion } = useSettingsStore.getState();
+
+    // Count the freshly-dropped enemy tiles to size the drop duration (mirrors
+    // the per-tile stagger in GameBoard / index.css).
+    let dropCount = 0;
+    for (const row of grid) {
+      for (const cell of row) {
+        if (cell.tile?.ownerId === 'enemy' && cell.tile.turnPlaced === lastEnemyDropTurn) {
+          dropCount++;
+        }
+      }
+    }
+
+    const dropMs = reduceMotion
+      ? REDUCED_MOTION_DROP_MS
+      : DROP_DURATION_MS + Math.max(0, dropCount - 1) * DROP_STAGGER_MS;
+
+    const timer = setTimeout(() => {
+      // A duplicate fire (StrictMode/double-mount) sees the cleared pending and
+      // bails, so the impact + resolution only happen once.
+      if (!useGameStore.getState().pendingEnemyTurn) return;
+      if (!reduceMotion) {
+        boardWrapperRef.current?.animate(SHAKE_KEYFRAMES, { duration: 220, easing: 'ease-out' });
+      }
+      soundManager.play('tileImpact');
+      triggerRumble();
+      resolveEnemyAttack();
+    }, dropMs);
+
+    return () => clearTimeout(timer);
+  }, [pendingEnemyTurn, resolveEnemyAttack]);
+
   const handleRestart = useCallback(() => {
     initGame(0);
   }, [initGame]);
@@ -132,7 +201,7 @@ export function Game() {
       >
         {/* Board area */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div ref={boardWrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
             <GameBoard />
             <BattleOverlay />
           </div>
@@ -229,6 +298,7 @@ export function Game() {
       <FeedbackButton />
       <LeaderboardButton />
       <LanguagePicker />
+      <SettingsButton />
     </div>
   );
 }

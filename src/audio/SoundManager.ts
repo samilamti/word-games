@@ -5,12 +5,19 @@ export type SoundName =
   | 'tileClick'
   | 'wordSubmit'
   | 'attackImpact'
+  | 'tileImpact'
   | 'hurt'
   | 'victory'
   | 'defeat';
 
 class SoundManagerImpl {
   private ctx: AudioContext | null = null;
+  private muted = false;
+
+  /** Toggle all sound output. Bound to the `soundEnabled` setting. */
+  setMuted(muted: boolean) {
+    this.muted = muted;
+  }
 
   private getCtx(): AudioContext {
     if (!this.ctx) {
@@ -23,12 +30,14 @@ class SoundManagerImpl {
   }
 
   play(sound: SoundName) {
+    if (this.muted) return;
     try {
       const ctx = this.getCtx();
       switch (sound) {
         case 'tileClick': this.playClick(ctx); break;
         case 'wordSubmit': this.playSweepUp(ctx); break;
         case 'attackImpact': this.playImpact(ctx); break;
+        case 'tileImpact': this.playTileImpact(ctx); break;
         case 'hurt': this.playHurt(ctx); break;
         case 'victory': this.playVictory(ctx); break;
         case 'defeat': this.playDefeat(ctx); break;
@@ -93,6 +102,27 @@ class SoundManagerImpl {
 
     // Add a click layer
     this.playTone(ctx, 400, 0.05, 'square', 0.08);
+  }
+
+  // Heavy low thud for an enemy tile slamming onto the board. Beefier and
+  // lower than playImpact, with a slightly randomized pitch so successive
+  // landings across turns don't sound identical.
+  private playTileImpact(ctx: AudioContext) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    const start = 170 + (Math.random() - 0.5) * 40; // ~150–190 Hz
+    osc.frequency.setValueAtTime(start, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.16);
+    gain.gain.setValueAtTime(0.34, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.22);
+
+    // Woody click transient for the "tap" of the tile contacting the board.
+    this.playTone(ctx, 240, 0.05, 'triangle', 0.12);
   }
 
   // Descending sweep

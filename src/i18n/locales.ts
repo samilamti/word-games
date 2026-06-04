@@ -53,6 +53,11 @@ export interface UIStrings {
   passedTurn: string;
   enemyPlays: string; // {name}, {word}, {n}
   enemyForfeits: string; // {name}
+  // Settings
+  settings: string;
+  reduceMotion: string;
+  soundEffects: string;
+  haptics: string;
 }
 
 export interface LocaleDef {
@@ -135,6 +140,10 @@ const EN: LocaleDef = {
     passedTurn: 'You passed your turn. Enemy\'s turn!',
     enemyPlays: '{name} plays {word} for {n}!',
     enemyForfeits: '{name} reshuffles its hand.',
+    settings: 'Settings',
+    reduceMotion: 'Reduce motion',
+    soundEffects: 'Sound effects',
+    haptics: 'Vibration',
   },
 };
 
@@ -209,6 +218,10 @@ const ES: LocaleDef = {
     passedTurn: 'Pasaste tu turno. ¡Turno del enemigo!',
     enemyPlays: '¡{name} juega {word} por {n}!',
     enemyForfeits: '{name} baraja sus fichas de nuevo.',
+    settings: 'Ajustes',
+    reduceMotion: 'Reducir movimiento',
+    soundEffects: 'Efectos de sonido',
+    haptics: 'Vibración',
   },
 };
 
@@ -281,6 +294,10 @@ const FR: LocaleDef = {
     passedTurn: 'Tu as passé ton tour. Au tour de l\'ennemi !',
     enemyPlays: '{name} joue {word} pour {n} !',
     enemyForfeits: '{name} rebrasse sa main.',
+    settings: 'Paramètres',
+    reduceMotion: 'Réduire les animations',
+    soundEffects: 'Effets sonores',
+    haptics: 'Vibrations',
   },
 };
 
@@ -356,6 +373,10 @@ const DE: LocaleDef = {
     passedTurn: 'Du hast ausgesetzt. Gegner ist dran!',
     enemyPlays: '{name} spielt {word} für {n}!',
     enemyForfeits: '{name} mischt seine Steine neu.',
+    settings: 'Einstellungen',
+    reduceMotion: 'Bewegung reduzieren',
+    soundEffects: 'Soundeffekte',
+    haptics: 'Vibration',
   },
 };
 
@@ -426,6 +447,10 @@ const PT: LocaleDef = {
     passedTurn: 'Passaste a tua vez. Vez do inimigo!',
     enemyPlays: '{name} joga {word} por {n}!',
     enemyForfeits: '{name} baralha as suas peças.',
+    settings: 'Definições',
+    reduceMotion: 'Reduzir movimento',
+    soundEffects: 'Efeitos sonoros',
+    haptics: 'Vibração',
   },
 };
 
@@ -493,6 +518,10 @@ const IT: LocaleDef = {
     passedTurn: 'Hai passato il turno. Turno del nemico!',
     enemyPlays: '{name} gioca {word} per {n}!',
     enemyForfeits: '{name} rimescola le sue tessere.',
+    settings: 'Impostazioni',
+    reduceMotion: 'Riduci animazioni',
+    soundEffects: 'Effetti sonori',
+    haptics: 'Vibrazione',
   },
 };
 

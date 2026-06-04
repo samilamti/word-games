@@ -1,6 +1,6 @@
 # Lexica Knights — Word Combat RPG
 
-Multi-language tile-based word combat game shipping to iOS App Store (TestFlight as of build 7) and the web.
+Multi-language tile-based word combat game shipping to iOS App Store (TestFlight as of build 9) and the web.
 
 ## Tech stack
 
@@ -25,8 +25,9 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 
 - `src/i18n/` — 6 LocaleDef bundles (tile distribution + UI strings + dict URL), per-locale accepted-words list, `useUI()` hook
 - `src/engine/` — Pure logic: `BoardState`, `WordValidator` (Set-based, locale-aware), `ScoreCalculator`, `TileBag` (takes a `LocaleDef`)
-- `src/store/gameStore.ts` — Zustand store: game state, run stats, current locale, Game Center alias, enemy progression
-- `src/components/` — React UI including `LanguagePicker`, `LeaderboardButton`, `LeaderboardModal`, `EnemyAppearToast`
+- `src/store/gameStore.ts` — Zustand store: game state, run stats, current locale, Game Center alias, enemy progression. Enemy attacks are deferred via `pendingEnemyTurn` so the tile-drop juice plays before damage lands (`resolveEnemyAttack`)
+- `src/store/settingsStore.ts` — Zustand store for accessibility/feel toggles (`reduceMotion` / `soundEnabled` / `hapticsEnabled`), persisted to `lexica_knights_settings`; read by `SoundManager` mute + `triggerHaptic`/`triggerRumble` + the tile-drop controller
+- `src/components/` — React UI including `LanguagePicker`, `LeaderboardButton`, `LeaderboardModal`, `EnemyAppearToast`, `SettingsButton` (gear → sound/vibration/reduce-motion)
 - `src/combat/BattleOverlay.tsx` — PixiJS app with `CharacterController`, `HpBar`, `DamageNumberManager`, ResizeObserver-driven responsive canvas
 - `src/leaderboard/leaderboard.ts` — Local per-device run records
 - `src/native/init.ts` — StatusBar / SplashScreen / Game Center auth / Haptics
@@ -68,6 +69,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `lexica_knights_runs` — leaderboard entries (capped at 50)
 - `lexica_knights_locale` — current language code
 - `lexica_knights_accepted_words_<locale>` — per-locale dispute-accepted words
+- `lexica_knights_settings` — accessibility/feel toggles (`reduceMotion`, `soundEnabled`, `hapticsEnabled`); `settingsStore`, defaults `reduceMotion` from `prefers-reduced-motion`
 
 ## Game design
 
@@ -77,4 +79,5 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - 5-enemy campaign with stats curve (HP 80 → 240, ATK 8 → 18)
 - Per-locale tile distributions and point values follow Wikipedia Scrabble standards
 - Planned mechanics (TODO): INSERT (inject letters mid-word), BRANCH (perpendicular word branching), gem effects, status effects
-- Planned polish (TODO, **after monetization**): **game feel / juice** — enemy tiles drop from the sky with screen rumble + impact SFX. A free *core retention* feature, **not** an IAP (juice belongs in the free demo as conversion fuel, not behind a paywall). Tech is already in place: PixiJS animation + Haptics (rumble) + Web Audio (SFX). Ship with reduce-motion / haptics-off / sound-off toggles for accessibility + low-end Android. Full runbook: `docs/tile-drop-3d-juice-plan.md`.
+- **Shipped (build 9, pulled forward ahead of monetization):** **game feel / juice** — when the enemy plays a word, its tiles tumble in (3D CSS `rotateX` under board `perspective`, reading-order stagger) and slam down with a screen shake + impact thud + device rumble. A free *core retention* feature, **not** an IAP (juice belongs in the free demo as conversion fuel, not behind a paywall). Implementation: DOM/CSS tumble via `.tile-drop-in` keyframes (`index.css`) applied in `GameBoard`; WAAPI screen shake on the board+canvas wrapper; **delayed** sequencing (tiles land → *then* attack) via `pendingEnemyTurn` deferral in `gameStore` + a controller hook in `Game.tsx`; `tileImpact` SFX (`SoundManager`); `triggerRumble()` (`native/init.ts`). Gated by a new `settingsStore` (sound / vibration / reduce-motion) surfaced via `SettingsButton`. Runbook + decisions: `docs/tile-drop-3d-juice-plan.md`. Possible future upgrades: per-tile thuds, Pixi particle burst on land, low-end Android jank check (Android still greenfield).
+- Planned polish (TODO): symmetric player-side "lock-in" pulse on submit (a lighter pulse, **not** a sky-drop — the player drags their tiles, so a fall would feel wrong).

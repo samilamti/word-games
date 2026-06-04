@@ -44,6 +44,17 @@ interface RejectionContext {
   placedCells: [number, number][];
 }
 
+/** The outcome of an enemy turn, held back so the tile-drop juice can play
+ *  before the attack lands. enemyTurn() commits the NPC's tiles to the board
+ *  (triggering the DOM tumble) and stashes this; the drop controller in Game
+ *  calls resolveEnemyAttack() once the tiles have settled, applying the damage
+ *  and queueing the attack/hurt animations. */
+interface PendingEnemyTurn {
+  playerHp: number;
+  phase: GamePhase;
+  events: CombatEvent[];
+}
+
 export interface GameState {
   // Board
   grid: BoardCell[][];
@@ -96,6 +107,13 @@ export interface GameState {
   // Combat animation events
   combatEvents: CombatEvent[];
 
+  // Tile-drop juice: the turn number whose freshly-placed enemy tiles should
+  // tumble in (GameBoard animates tiles matching this). 0 = nothing to drop.
+  lastEnemyDropTurn: number;
+  // Deferred enemy-attack outcome, applied by resolveEnemyAttack after the
+  // tiles land. Null when there's no pending attack.
+  pendingEnemyTurn: PendingEnemyTurn | null;
+
   // Dictionary loaded
   dictionaryLoaded: boolean;
 
@@ -119,6 +137,7 @@ export interface GameState {
   toggleSwapSelection: (tileId: string) => void;
   clearSwapSelection: () => void;
   enemyTurn: () => void;
+  resolveEnemyAttack: () => void;
   drawTiles: () => void;
   setMessage: (msg: string) => void;
   consumeCombatEvent: (id: string) => void;
@@ -151,6 +170,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   selectedForSwap: [],
   lastScore: null,
   combatEvents: [],
+  lastEnemyDropTurn: 0,
+  pendingEnemyTurn: null,
   message: 'Loading dictionary...',
   dictionaryLoaded: false,
   lastRejection: null,
@@ -194,6 +215,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       selectedForSwap: [],
       lastScore: null,
       combatEvents: [],
+      lastEnemyDropTurn: 0,
+      pendingEnemyTurn: null,
       lastRejection: null,
       runDamageTotal: 0,
       runHighestHit: 0,
@@ -584,8 +607,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   enemyTurn: () => {
     // StrictMode / double-timer safety: only act when it's genuinely the
-    // enemy's turn, so a stray second invocation can't double-commit a word.
-    if (get().phase !== 'enemy_turn') return;
+    // enemy's turn AND we haven't already committed this turn's move (the
+    // outcome sits in pendingEnemyTurn until the tiles finish dropping), so a
+    // stray second invocation can't double-commit a word.
+    if (get().phase !== 'enemy_turn' || get().pendingEnemyTurn) return;
     const { enemy, playerHp, playerDefense, grid, npcRack, npcBag, turnNumber, locale } = get();
     if (!enemy || enemy.hp <= 0) return;
 
@@ -629,27 +654,50 @@ export const useGameStore = create<GameState>((set, get) => ({
         newEvents.push({ id: genEventId(), type: 'player_death', timestamp: Date.now() });
       }
 
+      // Commit the tiles + message now (so they tumble in and the "X plays
+      // WORD" banner shows during the fall), but hold the damage, phase flip,
+      // and attack/hurt animations in pendingEnemyTurn. The drop controller in
+      // Game calls resolveEnemyAttack() once the tiles land. Phase stays
+      // 'enemy_turn' meanwhile, which keeps player input locked.
       set({
         grid: [...grid.map(r => [...r])],
         npcRack: newNpcRack,
-        playerHp: newHp,
         message: ui.enemyPlays
           .replace('{name}', enemy.name)
           .replace('{word}', move.mainWord)
           .replace('{n}', String(damage)),
-        phase: newHp <= 0 ? 'defeat' : 'playing',
-        combatEvents: [...get().combatEvents, ...newEvents],
+        lastEnemyDropTurn: turnNumber,
+        pendingEnemyTurn: {
+          playerHp: newHp,
+          phase: newHp <= 0 ? 'defeat' : 'playing',
+          events: newEvents,
+        },
       });
       return;
     }
 
     // No legal word — forgo the turn: reshuffle the whole rack, deal no damage.
+    // No tiles dropped, so no pendingEnemyTurn — go straight back to the player.
     npcBag.returnTiles(npcRack);
     const refreshed = npcBag.draw(RACK_SIZE);
     set({
       npcRack: refreshed,
       phase: 'playing',
       message: ui.enemyForfeits.replace('{name}', enemy.name),
+    });
+  },
+
+  // Apply the deferred enemy-attack outcome once the dropped tiles have landed.
+  // Idempotent: the null-guard makes a duplicate call (StrictMode/double-fire)
+  // a no-op, so the damage and animations only ever apply once.
+  resolveEnemyAttack: () => {
+    const pending = get().pendingEnemyTurn;
+    if (!pending) return;
+    set({
+      playerHp: pending.playerHp,
+      phase: pending.phase,
+      combatEvents: [...get().combatEvents, ...pending.events],
+      pendingEnemyTurn: null,
     });
   },
 

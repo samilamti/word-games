@@ -1,5 +1,17 @@
 # Tile-Drop 3D Juice Plan — Lexica Knights
 
+> **Status — ✅ SHIPPED (2026-06-04).** Implemented and uploaded to TestFlight as **build 9**
+> (marketing 1.0) for evaluation; pulled forward ahead of monetization at Sami's request.
+> **Decisions taken:** dedicated `settingsStore`; reading-order tile stagger; a single impact
+> (shake + thud + rumble) on landing, *not* per-tile (noted as a future upgrade); **delayed**
+> sequencing (tiles land → *then* the attack resolves) via a `pendingEnemyTurn` deferral in the
+> store + a controller hook in `Game.tsx` keyed on that object. **Browser-verified:** staggered
+> tumble + 3D perspective, screen shake with **no** Pixi `ResizeObserver` disturbance, attack
+> resolves after landing, reduce-motion disables tumble + shake (attack still resolves), and the
+> sound/haptics/reduce-motion settings persist. **Pending:** on-device iOS haptic (being verified
+> via this TestFlight build); the low-end **Android** jank check is deferred — Android is still
+> greenfield (no build yet).
+
 **Feature:** when the enemy (NPC) plays a word, its tiles **tumble down from the top of the
 screen** onto the board and **land with a screen rumble + impact thud**. Free *core retention*
 juice — **NOT** an IAP (see [CLAUDE.md](../CLAUDE.md) → Game design → Planned polish; the rationale
@@ -50,70 +62,72 @@ upgrade only.
 
 ## Phase 1 — Settings store + accessibility toggles (prerequisite)
 
-- [ ] Add a settings slice (extend `gameStore`, or a small dedicated `settingsStore`):
+- [x] Add a settings slice (extend `gameStore`, or a small dedicated `settingsStore`):
       `reduceMotion`, `soundEnabled`, `hapticsEnabled` (all boolean).
-- [ ] Persist to localStorage under `lexica_knights_settings`; load on init (mirror the existing
+- [x] Persist to localStorage under `lexica_knights_settings`; load on init (mirror the existing
       `lexica_knights_locale` pattern in `i18n/locales.ts`).
-- [ ] Default `reduceMotion` from `window.matchMedia('(prefers-reduced-motion: reduce)').matches`.
-- [ ] `SoundManager`: add `setMuted(bool)` + early-return in `play()`; bind to `soundEnabled`.
-- [ ] Gate `triggerHaptic` + the new rumble on `hapticsEnabled` (in addition to the native check).
-- [ ] Settings UI: a gear button + small modal (mirror `LanguagePicker` / `LeaderboardButton`),
+- [x] Default `reduceMotion` from `window.matchMedia('(prefers-reduced-motion: reduce)').matches`.
+- [x] `SoundManager`: add `setMuted(bool)` + early-return in `play()`; bind to `soundEnabled`.
+- [x] Gate `triggerHaptic` + the new rumble on `hapticsEnabled` (in addition to the native check).
+- [x] Settings UI: a gear button + small modal (mirror `LanguagePicker` / `LeaderboardButton`),
       three toggles, labels via `useUI()` (add the strings to all 6 locales).
 
 ## Phase 2 — Tile-drop animation (the 3D tumble)
 
-- [ ] In `GameBoard`'s `Cell`, when a tile is freshly enemy-placed
+- [x] In `GameBoard`'s `Cell`, when a tile is freshly enemy-placed
       (`tile.ownerId==='enemy' && tile.turnPlaced===<current turn>`), add a `drop-in` class.
-- [ ] CSS keyframes: from `translateY(-120%)` + `rotateX(-80deg)` + slight `scale`/overshoot →
+- [x] CSS keyframes: from `translateY(-120%)` + `rotateX(-80deg)` + slight `scale`/overshoot →
       settle to flat; `~320ms cubic-bezier(.34,1.56,.64,1)` (back-ease for the bounce), with a
       **stagger** via `animation-delay: calc(var(--drop-index) * 60ms)`.
-- [ ] Add `perspective: 600px` on the board container so the `rotateX` reads as depth.
-- [ ] **Animate once, not per render** — track a `justDropped` set / the drop turn number so React
+- [x] Add `perspective: 600px` on the board container so the `rotateX` reads as depth.
+- [x] **Animate once, not per render** — track a `justDropped` set / the drop turn number so React
       re-renders don't re-trigger the animation.
-- [ ] **Reduced-motion:** skip the keyframes entirely — tiles appear instantly or with an 80 ms
+- [x] **Reduced-motion:** skip the keyframes entirely — tiles appear instantly or with an 80 ms
       fade.
-- [ ] Decision: stagger order (left→right / center-out / simultaneous).
+- [x] Decision: stagger order (left→right / center-out / simultaneous).
 
 ## Phase 3 — Screen rumble (the shake)
 
-- [ ] CSS shake keyframe — `transform` jitter (~6–10 px + tiny rotate), 180–240 ms, decaying
+- [x] CSS shake keyframe — `transform` jitter (~6–10 px + tiny rotate), 180–240 ms, decaying
       (port the Pixi formula at `BattleOverlay.tsx:240`).
-- [ ] Apply to a **wrapper** around the board (ideally wrapping the Pixi canvas too, so board +
+- [x] Apply to a **wrapper** around the board (ideally wrapping the Pixi canvas too, so board +
       characters shake together).
-- [ ] Fire on **impact** (end of the drop), once per enemy turn.
-- [ ] **Reduced-motion:** no shake.
+- [x] Fire on **impact** (end of the drop), once per enemy turn.
+- [x] **Reduced-motion:** no shake.
 
 ## Phase 4 — Impact thud + rumble (audio + haptics)
 
-- [ ] Add a `tileImpact` sound to `SoundManager` (or reuse `attackImpact`): short, low, with a
+- [x] Add a `tileImpact` sound to `SoundManager` (or reuse `attackImpact`): short, low, with a
       slightly randomized pitch so staggered lands don't sound identical.
-- [ ] Add `triggerRumble()` to `native/init.ts`: `ImpactStyle.Heavy` (or `Haptics.vibrate({…})`),
+- [x] Add `triggerRumble()` to `native/init.ts`: `ImpactStyle.Heavy` (or `Haptics.vibrate({…})`),
       gated on `hapticsEnabled` + native.
-- [ ] Fire thud + rumble synced to the impact frame. Decision: one impact at the end vs. a small
+- [x] Fire thud + rumble synced to the impact frame. Decision: one impact at the end vs. a small
       thud per tile as each lands (richer but busier).
 
 ## Phase 5 — Sequencing with the combat pipeline
 
-- [ ] Coordinate ordering so the tiles **land before** the enemy's `enemy_attack` / `player_hurt`
+- [x] Coordinate ordering so the tiles **land before** the enemy's `enemy_attack` / `player_hurt`
       character animations read as the attack. Either:
   - keep parallel (tiles drop while the existing `enemy_attack` plays), or
   - delay pushing `enemy_attack` / `player_hurt` until the drop completes (short await in the
     controller before those events enter the BattleOverlay queue).
-- [ ] Cap total added latency at **≤ ~600 ms** so turns stay snappy.
-- [ ] Decision: controller location — a hook in `GameBoard`/`Game` reacting to `turnPlaced`
+- [x] Cap total added latency at **≤ ~600 ms** so turns stay snappy.
+- [x] Decision: controller location — a hook in `GameBoard`/`Game` reacting to `turnPlaced`
       changes (recommended for v1), vs. a new `enemy_tiles_drop` `CombatEvent` consumed alongside
       the others (use this if you later want Pixi to own the effect).
 
 ## Phase 6 — Test & verify
 
-- [ ] Trigger an enemy turn (or inject via `window.__store`, as in the blank-tile verification) →
+- [x] Trigger an enemy turn (or inject via `window.__store`, as in the blank-tile verification) →
       tiles tumble staggered, shake on impact, thud plays, haptic on device.
-- [ ] Toggle each setting off → each effect disables independently; `prefers-reduced-motion`
+- [x] Toggle each setting off → each effect disables independently; `prefers-reduced-motion`
       defaults motion off.
-- [ ] **Low-end Android:** no jank during drop+shake (ties to the Android plan's Pixi/low-RAM
-      check). Confirm the wrapper transform does **not** trigger the Pixi `ResizeObserver`
-      (transforms are composited, but verify on device).
-- [ ] iOS: haptic fires (native-only; no-ops on web).
+- [~] **Low-end Android:** no jank during drop+shake (ties to the Android plan's Pixi/low-RAM
+      check). The Pixi `ResizeObserver` concern is **verified clear in the browser** (the wrapper
+      transform does not fire a resize); the on-device Android jank check is **deferred** —
+      Android is still greenfield (no build yet).
+- [~] iOS: haptic fires (native-only; no-ops on web). **Pending** on-device verification via
+      TestFlight build 9.
 
 ## Optional / later
 
