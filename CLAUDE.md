@@ -17,6 +17,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `npm run dev` — Vite dev (port 5188)
 - `npm run build` — `tsc -b && vite build` → `dist/`
 - `npm run ios:build` — `CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync ios`
+- `npm run ios:release` — full TestFlight pipeline (build→archive→export→altool); **dry-run by default**, add `-- --confirm` to ship, `-- --status` to query build states. Auto-picks the next build number from ASC. See `scripts/asc/release.mjs`.
 - `npm run ios:open` — open Xcode workspace
 - `npm run ios:assets` — rasterize SVG → PNG + `npx capacitor-assets generate --ios`
 - `npx tsc -b` — TypeScript check only
@@ -59,8 +60,9 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - Categories: primary `GAMES` with subcategories `GAMES_PUZZLE` (primary), `GAMES_STRATEGY` (secondary). **There's no `GAMES_WORD`** — Apple consolidated taxonomy.
 - Capabilities enabled on App ID: `IN_APP_PURCHASE` (default), `GAME_CENTER` (added in v6)
 - Age rating profile: `violenceCartoonOrFantasy=INFREQUENT_OR_MILD`, everything else `NONE` / `false` → 9+
-- Encryption: `usesNonExemptEncryption=false` (HTTPS via WKWebView is exempt)
+- Encryption: `usesNonExemptEncryption=false` (HTTPS via WKWebView is exempt). `ITSAppUsesNonExemptEncryption=false` is in `Info.plist`, so builds skip the TestFlight "Missing Compliance" gate.
 - Privacy declaration in App Store Connect web UI must include the Web3Forms feedback transmission when `VITE_WEB3FORMS_KEY` is set in production
+- **Cutting a build:** `npm run ios:release` (dry-run) → `-- --confirm` to ship. The script (`scripts/asc/release.mjs`) reads the next build number from ASC, archives with a `CURRENT_PROJECT_VERSION` CLI override (so `pbxproj` stays at `1` — bumps are never committed), exports, uploads via `altool` (retries the transient `Defaults.properties` error), and sets the en-US "What to Test" note. The `scripts/asc/*.mjs` API helpers run via `node --env-file=.env.local` (creds: `ASC_KEY_ID`/`ISSUER_ID`/`KEY_PATH`/`TEAM_ID`; signing key `6368K27LRK`).
 
 ## Storage keys (localStorage)
 

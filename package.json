@@ -13,6 +13,7 @@
     "ios:build": "CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "ios:run": "npm run ios:build && npm run ios:open",
+    "ios:release": "node --env-file=.env.local scripts/asc/release.mjs",
     "assets:rasterize": "node scripts/build-assets.mjs",
     "ios:assets": "npm run assets:rasterize && npx capacitor-assets generate --ios"
   },
