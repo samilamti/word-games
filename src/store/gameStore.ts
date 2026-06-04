@@ -10,7 +10,7 @@ import type { LocaleCode } from '../i18n/locales.ts';
 function genEventId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-import { createEmptyBoard, placeTile, removeTile, validatePlacement } from '../engine/BoardState.ts';
+import { createEmptyBoard, placeTile, removeTile, validatePlacement, resolveFormedWords } from '../engine/BoardState.ts';
 import { TileBag } from '../engine/TileBag.ts';
 import { getValidator } from '../engine/WordValidator.ts';
 import { calculatePlacementDamage } from '../engine/ScoreCalculator.ts';
@@ -397,23 +397,27 @@ export const useGameStore = create<GameState>((set, get) => ({
       return { success: false, damage: 0, error: validation.error };
     }
 
-    // Dictionary check
+    // Dictionary check. Blank/wild tiles carry a literal '*' on the board, so
+    // we resolve them to concrete letters here — choosing an assignment under
+    // which every formed word (main + crosswords) is valid and writing the
+    // chosen letter onto the tile so the board shows it. Mirrors the NPC.
     const validator = getValidator();
-    for (const word of validation.formedWords) {
-      if (!validator.isWord(word.text)) {
-        set({
-          lastRejection: {
-            word: word.text,
-            formedWords: validation.formedWords,
-            placedCells,
-          },
-        });
-        return { success: false, damage: 0, error: `"${word.text}" is not a valid word` };
-      }
+    const alphabet = LOCALES[get().locale].letters.map(l => l.letter);
+    const { formedWords, failedWord } = resolveFormedWords(
+      grid,
+      placedCells,
+      w => validator.isWord(w),
+      alphabet,
+    );
+    if (failedWord !== null) {
+      set({
+        lastRejection: { word: failedWord, formedWords, placedCells },
+      });
+      return { success: false, damage: 0, error: `"${failedWord}" is not a valid word` };
     }
 
     // Score calculation
-    const score = calculatePlacementDamage(grid, validation.formedWords, placedCells);
+    const score = calculatePlacementDamage(grid, formedWords, placedCells);
 
     // Apply attack bonus
     const attackBonus = 1 + playerAttack / 100;
@@ -430,9 +434,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       newEnemyHp = Math.max(0, enemy.hp - totalDamage);
     }
 
-    const wordTexts = validation.formedWords.map(w => w.text).join(', ');
+    const wordTexts = formedWords.map(w => w.text).join(', ');
     // Track best/longest word this run for the leaderboard.
-    const longestThisTurn = validation.formedWords.reduce(
+    const longestThisTurn = formedWords.reduce(
       (best, w) => (w.text.length > best.length ? w.text : best),
       get().runLongestWord,
     );

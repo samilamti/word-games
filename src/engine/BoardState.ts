@@ -299,3 +299,79 @@ export function validatePlacement(
 
   return { valid: true, formedWords };
 }
+
+export interface FormedWord {
+  text: string;
+  cells: [number, number][];
+  direction: Direction;
+}
+
+export interface BlankResolution {
+  /** Formed words with any blank/wild tiles resolved to concrete letters. */
+  formedWords: FormedWord[];
+  /** The word that failed dictionary validation, or null when all are valid. */
+  failedWord: string | null;
+}
+
+/**
+ * Resolve blank/wild tiles in a just-placed word to concrete letters.
+ *
+ * Wild tiles sit on the board carrying the literal letter '*' (they score 0
+ * and the player never picks a letter), so a naive lookup of the formed word —
+ * e.g. "HO*EL" — always fails the dictionary. This brute-forces the wild
+ * positions over the locale's `alphabet` and keeps the first assignment under
+ * which *every* formed word (main word + any crosswords) is valid, writing the
+ * chosen letter onto each wild tile in place (pointValue stays 0). Mirrors the
+ * NPC's wild handling in NpcWordAI so the player and AI agree on what a blank
+ * can represent.
+ *
+ * On success the wild tiles keep their resolved letters (so the board shows
+ * them) and the resolved words are returned. On failure the wilds are restored
+ * to '*' and `failedWord` names the longest formed word, for the rejection UI.
+ */
+export function resolveFormedWords(
+  grid: BoardCell[][],
+  placedCells: [number, number][],
+  isWord: (word: string) => boolean,
+  alphabet: string[],
+): BlankResolution {
+  const formedWords = getFormedWords(grid, placedCells);
+
+  const wildCells = placedCells.filter(([r, c]) => grid[r][c].tile?.isWild);
+  if (wildCells.length === 0) {
+    const failed = formedWords.find(w => !isWord(w.text));
+    return { formedWords, failedWord: failed ? failed.text : null };
+  }
+
+  const originals = wildCells.map(([r, c]) => grid[r][c].tile!.letter);
+  let resolved: FormedWord[] | null = null;
+
+  const assign = (i: number): void => {
+    if (resolved) return;
+    if (i === wildCells.length) {
+      const words = getFormedWords(grid, placedCells);
+      if (words.every(w => isWord(w.text))) resolved = words;
+      return;
+    }
+    const [r, c] = wildCells[i];
+    const tile = grid[r][c].tile!;
+    for (const letter of alphabet) {
+      tile.letter = letter;
+      assign(i + 1);
+      if (resolved) return;
+    }
+  };
+  assign(0);
+
+  if (resolved) return { formedWords: resolved, failedWord: null };
+
+  // Nothing validated — restore the blanks and report the longest word.
+  wildCells.forEach(([r, c], idx) => {
+    grid[r][c].tile!.letter = originals[idx];
+  });
+  const longest = formedWords.reduce(
+    (best, w) => (w.text.length > best.length ? w.text : best),
+    '',
+  );
+  return { formedWords, failedWord: longest };
+}
