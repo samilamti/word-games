@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { loadDictionary } from '../engine/WordValidator.ts';
@@ -26,6 +26,14 @@ const DROP_DURATION_MS = 340;
 const DROP_STAGGER_MS = 45;
 const REDUCED_MOTION_DROP_MS = 120;
 
+// After the slowed final death animation finishes, hold this beat before the
+// victory/defeat modal covers the board — a moment to savour the win/loss.
+// A fallback timer reveals the modal anyway if the death signal never lands.
+const SAVOUR_BEAT_MS = 800;
+const REDUCED_SAVOUR_BEAT_MS = 150;
+const MODAL_FALLBACK_MS = 3500;
+const REDUCED_MODAL_FALLBACK_MS = 400;
+
 // Screen-rumble keyframes for the board+characters wrapper, run via the Web
 // Animations API on impact (decaying jitter — a DOM port of the Pixi hurt
 // shake). Restarts cleanly each call without remounting the Pixi canvas.
@@ -49,8 +57,13 @@ export function Game() {
   const pendingEnemyTurn = useGameStore(s => s.pendingEnemyTurn);
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
+  const finaleAnimationDone = useGameStore(s => s.finaleAnimationDone);
+  const reduceMotion = useSettingsStore(s => s.reduceMotion);
   const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
   const boardWrapperRef = useRef<HTMLDivElement>(null); // shake target (board + Pixi)
+  // Gates the victory/defeat modal: held back until the slowed final death
+  // animation has played (plus a savour beat) so it doesn't cover the kill.
+  const [modalRevealed, setModalRevealed] = useState(false);
   const ui = useUI();
 
   // Load dictionary on mount AND whenever the locale changes. WordValidator
@@ -87,6 +100,29 @@ export function Game() {
       highestSingleHit: s.runHighestHit,
     });
   }, [phase]);
+
+  // Reveal the victory/defeat modal only after the slowed final move has played
+  // out. We wait for BattleOverlay to flag the death animation done, then hold a
+  // short savour beat. A fallback timer reveals the modal regardless, so the
+  // player is never stuck behind a missed signal. Reset when a new fight begins.
+  useEffect(() => {
+    if (phase !== 'victory' && phase !== 'defeat') {
+      setModalRevealed(false);
+      return;
+    }
+    const beat = reduceMotion ? REDUCED_SAVOUR_BEAT_MS : SAVOUR_BEAT_MS;
+    const fallbackMs = reduceMotion ? REDUCED_MODAL_FALLBACK_MS : MODAL_FALLBACK_MS;
+    let beatTimer: ReturnType<typeof setTimeout> | undefined;
+    // Fallback: reveal even if the death-done signal never arrives.
+    const fallbackTimer = setTimeout(() => setModalRevealed(true), fallbackMs);
+    if (finaleAnimationDone) {
+      beatTimer = setTimeout(() => setModalRevealed(true), beat);
+    }
+    return () => {
+      clearTimeout(fallbackTimer);
+      if (beatTimer) clearTimeout(beatTimer);
+    };
+  }, [phase, finaleAnimationDone, reduceMotion]);
 
   // Snap scroll back to the top whenever a new enemy spawns. After the
   // victory overlay closes the page can be left scrolled down (lastScore
@@ -214,7 +250,7 @@ export function Game() {
       </div>
 
       {/* Victory/Defeat overlay */}
-      {(phase === 'victory' || phase === 'defeat') && (
+      {(phase === 'victory' || phase === 'defeat') && modalRevealed && (
         <div
           style={{
             position: 'fixed',

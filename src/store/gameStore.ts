@@ -113,6 +113,10 @@ export interface GameState {
   // Deferred enemy-attack outcome, applied by resolveEnemyAttack after the
   // tiles land. Null when there's no pending attack.
   pendingEnemyTurn: PendingEnemyTurn | null;
+  // Set by BattleOverlay once the terminal death animation (enemy or player)
+  // has fully played. Game uses this to hold the victory/defeat modal back so
+  // the slowed final move can be savoured before the overlay covers the board.
+  finaleAnimationDone: boolean;
 
   // Dictionary loaded
   dictionaryLoaded: boolean;
@@ -138,6 +142,7 @@ export interface GameState {
   clearSwapSelection: () => void;
   enemyTurn: () => void;
   resolveEnemyAttack: () => void;
+  markFinaleAnimationDone: () => void;
   drawTiles: () => void;
   setMessage: (msg: string) => void;
   consumeCombatEvent: (id: string) => void;
@@ -172,6 +177,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   combatEvents: [],
   lastEnemyDropTurn: 0,
   pendingEnemyTurn: null,
+  finaleAnimationDone: false,
   message: 'Loading dictionary...',
   dictionaryLoaded: false,
   lastRejection: null,
@@ -217,6 +223,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       combatEvents: [],
       lastEnemyDropTurn: 0,
       pendingEnemyTurn: null,
+      finaleAnimationDone: false,
       lastRejection: null,
       runDamageTotal: 0,
       runHighestHit: 0,
@@ -700,6 +707,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       pendingEnemyTurn: null,
     });
   },
+
+  // Called by BattleOverlay when the terminal death animation finishes playing.
+  // Game watches this flag to reveal the victory/defeat modal after a beat.
+  markFinaleAnimationDone: () => set({ finaleAnimationDone: true }),
 
   drawTiles: () => {
     const { rack, tileBag } = get();

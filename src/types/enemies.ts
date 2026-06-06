@@ -17,8 +17,9 @@ export interface EnemyDef {
   spriteUrl: string;
   /** Spoken hook shown in the appears-toast under the name. */
   tagline: string;
-  /** NPC word-damage scaling. Always > 1 so any word the NPC plays out-damages
-   *  the player's same word. Ramps up across the campaign. */
+  /** NPC word-damage scaling, applied to the NPC's word score. Ramps up across
+   *  the campaign. The earliest enemy sits below 1 (under-damages the player's
+   *  same word) to give beginners breathing room; later enemies climb above 1. */
   damageMultiplier: number;
   /** Word-strength lever passed to the NPC move search: 0 = play the strongest
    *  legal word found; higher = deliberately pick a weaker (k-th best) word so
@@ -35,7 +36,7 @@ export const ENEMY_CATALOG: EnemyDef[] = [
     defense: 0,
     spriteUrl: 'enemies/goblin.png',
     tagline: 'A scrappy little scribbler with a poisoned pen.',
-    damageMultiplier: 1.15,
+    damageMultiplier: 0.85,
     pickRank: 4,
   },
   {
@@ -46,7 +47,7 @@ export const ENEMY_CATALOG: EnemyDef[] = [
     defense: 1,
     spriteUrl: 'enemies/orc.png',
     tagline: 'Tusked, axe-handed, and unimpressed by your vocabulary.',
-    damageMultiplier: 1.30,
+    damageMultiplier: 1.05,
     pickRank: 3,
   },
   {
@@ -57,7 +58,7 @@ export const ENEMY_CATALOG: EnemyDef[] = [
     defense: 2,
     spriteUrl: 'enemies/troll.png',
     tagline: 'Bigger than a bookshelf and twice as stubborn.',
-    damageMultiplier: 1.45,
+    damageMultiplier: 1.25,
     pickRank: 2,
   },
   {
@@ -68,7 +69,7 @@ export const ENEMY_CATALOG: EnemyDef[] = [
     defense: 1,
     spriteUrl: 'enemies/undead.png',
     tagline: 'Whispering forgotten words from a forgotten tongue.',
-    damageMultiplier: 1.60,
+    damageMultiplier: 1.45,
     pickRank: 1,
   },
   {
@@ -79,7 +80,7 @@ export const ENEMY_CATALOG: EnemyDef[] = [
     defense: 3,
     spriteUrl: 'enemies/wraith.png',
     tagline: 'A grief without a body, hungry for sentences.',
-    damageMultiplier: 1.80,
+    damageMultiplier: 1.70,
     pickRank: 0,
   },
 ];

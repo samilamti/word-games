@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import type { CombatEvent } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { soundManager } from '../audio/SoundManager.ts';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 
@@ -22,6 +23,12 @@ const CHAR_BASE_Y_OFFSET = 25; // pixels above the bottom edge
 const WIZARD_ALPHA_PLAYING = 1;
 const WIZARD_ALPHA_COMBAT = 1;
 const GOBLIN_ALPHA = 1;
+
+// Slow-motion multiplier applied to the combat ticker during the terminal
+// killing exchange (the move that ends in a death). 0.4 = 40% speed, so the
+// lunge → hit → fall plays out slowly and the win/loss can be savoured.
+// Disabled (factor 1) when reduce-motion is on.
+const FINALE_SLOWMO = 0.4;
 
 // ─── Easing ───
 
@@ -512,6 +519,9 @@ export function BattleOverlay() {
   const scaleRef = useRef(1);
   const processingRef = useRef(false);
   const queueRef = useRef<CombatEvent[]>([]);
+  // When true, the ticker runs at FINALE_SLOWMO speed — armed for the terminal
+  // killing exchange, cleared when a new fight starts.
+  const finaleSlowMoRef = useRef(false);
 
   // Initialize PixiJS application + resize observer + enemy sprite preload
   useEffect(() => {
@@ -645,9 +655,10 @@ export function BattleOverlay() {
       }
 
       app.ticker.add((ticker) => {
-        player.update(ticker.deltaTime);
-        enemy.update(ticker.deltaTime);
-        dmg.update(ticker.deltaTime);
+        const dt = ticker.deltaTime * (finaleSlowMoRef.current ? FINALE_SLOWMO : 1);
+        player.update(dt);
+        enemy.update(dt);
+        dmg.update(dt);
       });
     })();
 
@@ -734,6 +745,7 @@ export function BattleOverlay() {
         dmgRef.current?.clear();
         queueRef.current = [];
         processingRef.current = false;
+        finaleSlowMoRef.current = false;
       }
 
       // Queue new combat events
@@ -742,6 +754,15 @@ export function BattleOverlay() {
           if (!queueRef.current.some(e => e.id === event.id)) {
             queueRef.current.push(event);
           }
+        }
+        // Arm slow-motion for the terminal killing exchange: when the freshly
+        // queued batch contains a death, the whole lunge → hit → fall plays at
+        // FINALE_SLOWMO speed. Honors reduce-motion (no slow-mo when set).
+        const hasDeath = queueRef.current.some(
+          e => e.type === 'enemy_death' || e.type === 'player_death',
+        );
+        if (hasDeath && !useSettingsStore.getState().reduceMotion) {
+          finaleSlowMoRef.current = true;
         }
         processQueue();
       }
@@ -801,9 +822,11 @@ export function BattleOverlay() {
         break;
       case 'enemy_death':
         await enemy.play('death');
+        useGameStore.getState().markFinaleAnimationDone();
         break;
       case 'player_death':
         await player.play('death');
+        useGameStore.getState().markFinaleAnimationDone();
         break;
     }
 
