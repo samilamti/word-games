@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDevStore } from '../store/devStore.ts';
 import { JournalModal } from './JournalModal.tsx';
+import { requireUnlock } from '../store/entitlementStore.ts';
 
 /**
  * Floating button that opens the word journal. Stacked just above the
@@ -17,7 +18,9 @@ export function JournalButton() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (requireUnlock('journal')) setOpen(true); // locked → paywall instead
+        }}
         aria-label="Open word journal"
         title="Word journal"
         style={{

@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore.ts';
 import { useDevStore } from '../store/devStore.ts';
 import { useJournalStore } from '../store/journalStore.ts';
 import { definitionService, type DefEntry } from '../definitions/DefinitionService.ts';
+import { requireUnlock } from '../store/entitlementStore.ts';
 
 /**
  * Ephemeral "what did I just spell?" definition card — the free "taste" hook of
@@ -115,6 +116,7 @@ export function DefinitionToast() {
         {m2Enabled && (
           <button
             onClick={() => {
+              if (!requireUnlock('journal')) return; // locked → paywall
               saveToJournal(saveWord, locale, saveDef);
               setSavedTrigger(at);
             }}

@@ -14,6 +14,8 @@ import { SettingsButton } from './SettingsButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { DefinitionToast } from './DefinitionToast.tsx';
 import { JournalButton } from './JournalButton.tsx';
+import { Paywall } from './Paywall.tsx';
+import { requireUnlock } from '../store/entitlementStore.ts';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
 import { soundManager } from '../audio/SoundManager.ts';
@@ -27,6 +29,10 @@ import { useUI } from '../i18n/useUI.ts';
 const DROP_DURATION_MS = 340;
 const DROP_STAGGER_MS = 45;
 const REDUCED_MOTION_DROP_MS = 120;
+
+// Free campaign length — enemies 0 and 1 are free; advancing to the 3rd needs
+// the one-time unlock (M3). Gating is preview-gated by the dev flag for now.
+const FREE_ENEMY_COUNT = 2;
 
 // After the slowed final death animation finishes, hold this beat before the
 // victory/defeat modal covers the board — a moment to savour the win/loss.
@@ -195,8 +201,11 @@ export function Game() {
   }, [initGame]);
 
   const handleNext = useCallback(() => {
+    // Advancing past the free campaign (to enemy index >= FREE_ENEMY_COUNT)
+    // requires the unlock; requireUnlock opens the paywall and returns false.
+    if (enemyIndex + 1 >= FREE_ENEMY_COUNT && !requireUnlock('campaign')) return;
     nextEnemy();
-  }, [nextEnemy]);
+  }, [nextEnemy, enemyIndex]);
 
   const isFinalEnemy = enemyIndex >= ENEMY_CATALOG.length - 1;
 
@@ -339,6 +348,7 @@ export function Game() {
       <JournalButton />
       <LanguagePicker />
       <SettingsButton />
+      <Paywall />
     </div>
   );
 }
