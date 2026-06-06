@@ -1,26 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
+import { useDevStore } from '../store/devStore.ts';
+import { useJournalStore } from '../store/journalStore.ts';
 import { definitionService, type DefEntry } from '../definitions/DefinitionService.ts';
 
 /**
  * Ephemeral "what did I just spell?" definition card — the free "taste" hook of
  * the definitions feature (M1). Fires on every successful play, watching
- * gameStore.lastDefinedWord/lastDefinedAt (set in submitWord/disputeWord on the
- * turn's longest formed word).
+ * gameStore.lastDefinedWord/lastDefinedAt (the turn's longest formed word).
  *
- * Shape mirrors EnemyAppearToast, with one addition: the definition must be
- * fetched (DefinitionService.lookup is async + bucketed), so the resolved entry
- * lives in component state. Timing stays pure CSS — the `definitionToast`
- * keyframe in index.css drives fade-in/hold/fade-out (a useState+setTimeout
- * visibility scheme had show-timing bugs; see CLAUDE.md). The card renders only
- * once an entry has resolved for the CURRENT trigger, so a stale word never
- * flashes and a word with no definition simply shows nothing.
+ * Async lookup result lives in component state; timing is pure CSS (the
+ * `definitionToast` keyframe in index.css). The card renders only once an entry
+ * has resolved for the CURRENT trigger, so a stale word never flashes and a word
+ * with no definition shows nothing. onAnimationEnd unmounts the card after the
+ * fade-out so the (now-invisible) Save button can't intercept taps.
  *
- * pointerEvents:'none' — never intercepts a tap on the board/rack beneath it.
- *
- * NOTE: the "★ Save to journal" affordance (plan Phase B) is intentionally
- * deferred — it depends on journalStore (Phase C) + the entitlement/paywall
- * (Phase D). M1 is definitions *appearing*, free, in all 6 languages.
+ * The "★ Save" affordance (Phase C / M2) is gated behind the dev flag for now;
+ * the entitlement/paywall gate comes in Phase D. The whole card is
+ * pointerEvents:none EXCEPT the Save button, so it never blocks the board.
  */
 
 /** Lowercase then capitalize first letter — headword styling for the uppercase
@@ -33,12 +30,15 @@ function headword(word: string): string {
 const ACCENT = '#ffd54f';
 
 export function DefinitionToast() {
-  const word = useGameStore(s => s.lastDefinedWord);
-  const at = useGameStore(s => s.lastDefinedAt);
-  const locale = useGameStore(s => s.locale);
+  const word = useGameStore((s) => s.lastDefinedWord);
+  const at = useGameStore((s) => s.lastDefinedAt);
+  const locale = useGameStore((s) => s.locale);
+  const m2Enabled = useDevStore((s) => s.m2Enabled);
+  const saveToJournal = useJournalStore((s) => s.save);
 
   const [entry, setEntry] = useState<DefEntry | null>(null);
   const [resolvedAt, setResolvedAt] = useState(0);
+  const [savedTrigger, setSavedTrigger] = useState(0);
 
   useEffect(() => {
     if (!at || !word) return;
@@ -54,15 +54,20 @@ export function DefinitionToast() {
     };
   }, [at, word, locale]);
 
-  // Render only the entry that matches the current trigger — guards against a
-  // slow lookup resolving after its word was already superseded.
   if (!entry || resolvedAt !== at) return null;
+
+  // For an inflected form, save (and later review) the base lemma rather than
+  // every inflection — keeps the journal a clean vocabulary list.
+  const saveWord = entry.formOf?.lemma ?? word;
+  const saveDef: DefEntry = entry.formOf ? { ...entry, formOf: undefined } : entry;
+  const saved = savedTrigger === at;
 
   const senses = entry.senses.slice(0, 2);
 
   return (
     <div
       key={at}
+      onAnimationEnd={() => setEntry(null)}
       style={{
         position: 'fixed',
         top: 'calc(var(--safe-top) + 10px)',
@@ -106,6 +111,33 @@ export function DefinitionToast() {
           >
             EN
           </span>
+        )}
+        {m2Enabled && (
+          <button
+            onClick={() => {
+              saveToJournal(saveWord, locale, saveDef);
+              setSavedTrigger(at);
+            }}
+            disabled={saved}
+            title={saved ? 'Saved to journal' : 'Save to journal'}
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 'auto',
+              minHeight: 0,
+              minWidth: 0,
+              padding: '3px 10px',
+              fontSize: 12,
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              color: saved ? '#0d0d1a' : ACCENT,
+              backgroundColor: saved ? ACCENT : 'transparent',
+              border: `1px solid ${ACCENT}`,
+              borderRadius: 6,
+              cursor: saved ? 'default' : 'pointer',
+            }}
+          >
+            {saved ? '★ Saved' : '★ Save'}
+          </button>
         )}
       </div>
 

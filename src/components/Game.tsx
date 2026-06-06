@@ -13,6 +13,7 @@ import { LanguagePicker } from './LanguagePicker.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { DefinitionToast } from './DefinitionToast.tsx';
+import { JournalButton } from './JournalButton.tsx';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
 import { soundManager } from '../audio/SoundManager.ts';
@@ -335,6 +336,7 @@ export function Game() {
       <DefinitionToast />
       <FeedbackButton />
       <LeaderboardButton />
+      <JournalButton />
       <LanguagePicker />
       <SettingsButton />
     </div>
