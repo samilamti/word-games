@@ -12,6 +12,7 @@ import { LeaderboardButton } from './LeaderboardButton.tsx';
 import { LanguagePicker } from './LanguagePicker.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
+import { DefinitionToast } from './DefinitionToast.tsx';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
 import { soundManager } from '../audio/SoundManager.ts';
@@ -331,6 +332,7 @@ export function Game() {
       )}
 
       <EnemyAppearToast />
+      <DefinitionToast />
       <FeedbackButton />
       <LeaderboardButton />
       <LanguagePicker />

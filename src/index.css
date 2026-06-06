@@ -69,6 +69,18 @@ button:active:not(:disabled) {
   100% { opacity: 0; transform: translate(-50%, -42%) scale(1.05); }
 }
 
+/* Player-side definition card (DefinitionToast): a slim top-center notice that
+   fades in, holds long enough to read a gloss, then fades out. Timing lives
+   here, not in JS, so there's no setState/timeout race — the component just
+   remounts per word via key={lastDefinedAt}. Pairs with the 4.5s duration set
+   on the element (translateX(-50%) keeps it horizontally centered throughout). */
+@keyframes definitionToast {
+  0%   { opacity: 0; transform: translate(-50%, -12px); }
+  6%   { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+
 /* Enemy tile-drop "3D" tumble: each freshly-placed NPC tile falls from above
    the board, pitching forward (rotateX) under the board's perspective, and
    settles flat with a back-eased bounce. Staggered in reading order via

@@ -79,6 +79,12 @@ export interface GameState {
    *  this to fire the volatile "A wild X appears!" notice without baking the
    *  message into the long-lived `message` field (which would expand the HUD). */
   enemyAppearAt: number;
+  /** The played word (the turn's longest formed word) the DefinitionToast
+   *  should define, + a volatile timestamp that triggers it. Mirrors the
+   *  enemyAppearAt pattern; the lookup itself is async + game-state-free
+   *  (DefinitionService), so only the trigger lives in the store. */
+  lastDefinedWord: string;
+  lastDefinedAt: number;
 
   // Leaderboard tracking (current run; reset on initGame, recorded on victory)
   runDamageTotal: number;
@@ -163,6 +169,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   enemy: null,
   enemyIndex: 0,
   enemyAppearAt: 0,
+  lastDefinedWord: '',
+  lastDefinedAt: 0,
   runDamageTotal: 0,
   runHighestHit: 0,
   runLongestWord: '',
@@ -214,6 +222,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       enemy,
       enemyIndex: idx,
       enemyAppearAt: Date.now(),
+      lastDefinedWord: '',
+      lastDefinedAt: 0,
       phase: 'playing',
       turnNumber: 1,
       pendingTiles: [],
@@ -465,6 +475,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const wordTexts = formedWords.map(w => w.text).join(', ');
+    // Longest word of THIS placement — the most meaningful one to define.
+    const definedWord = formedWords.reduce((a, w) => (w.text.length > a.length ? w.text : a), '');
     // Track best/longest word this run for the leaderboard.
     const longestThisTurn = formedWords.reduce(
       (best, w) => (w.text.length > best.length ? w.text : best),
@@ -493,6 +505,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       runDamageTotal: get().runDamageTotal + totalDamage,
       runHighestHit: Math.max(get().runHighestHit, totalDamage),
       runLongestWord: longestThisTurn,
+      lastDefinedWord: definedWord,
+      lastDefinedAt: Date.now(),
     });
 
     // Draw tiles after a short delay (handled by component)
@@ -536,6 +550,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Apply damage to enemy
     const newEnemyHp = Math.max(0, enemy.hp - totalDamage);
     const wordTexts = formedWords.map(w => w.text).join(', ');
+    const definedWord = formedWords.reduce((a, w) => (w.text.length > a.length ? w.text : a), '');
     const longestThisTurn = formedWords.reduce(
       (best, w) => (w.text.length > best.length ? w.text : best),
       get().runLongestWord,
@@ -563,6 +578,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       runDamageTotal: get().runDamageTotal + totalDamage,
       runHighestHit: Math.max(get().runHighestHit, totalDamage),
       runLongestWord: longestThisTurn,
+      lastDefinedWord: definedWord,
+      lastDefinedAt: Date.now(),
       rack: get().rack, // pending tiles already on board, rack already updated
     });
 
