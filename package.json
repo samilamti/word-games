@@ -15,7 +15,12 @@
     "ios:run": "npm run ios:build && npm run ios:open",
     "ios:release": "node --env-file=.env.local scripts/asc/release.mjs",
     "assets:rasterize": "node scripts/build-assets.mjs",
-    "ios:assets": "npm run assets:rasterize && npx capacitor-assets generate --ios"
+    "ios:assets": "npm run assets:rasterize && npx capacitor-assets generate --ios",
+    "data:fetch": "node scripts/data/fetch-sources.mjs",
+    "data:build": "node scripts/data/build-definitions.mjs",
+    "data:package": "node scripts/data/package-defs.mjs && node scripts/data/gen-attribution.mjs",
+    "data:report": "node scripts/data/report-coverage.mjs",
+    "data:all": "npm run data:fetch && npm run data:build && npm run data:package && npm run data:report"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

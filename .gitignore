@@ -33,6 +33,11 @@ build/
 # Raw dictionary downloads — normalized output goes into public/dictionaries/
 tmp/
 
+# Generated word-definition datasets (~300–450 MB) — DURABLE LOCAL storage:
+# bundled into app builds (public/ → dist/ → cap sync) but never committed.
+# Regenerate manually with `npm run data:all`.
+public/definitions/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
