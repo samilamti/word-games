@@ -16,6 +16,10 @@
     "ios:release": "node --env-file=.env.local scripts/asc/release.mjs",
     "assets:rasterize": "node scripts/build-assets.mjs",
     "ios:assets": "npm run assets:rasterize && npx capacitor-assets generate --ios",
+    "android:build": "CAPACITOR=1 npm run build && node scripts/strip-non-bundled-assets.mjs && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npm run android:build && npx cap run android",
+    "android:assets": "npm run assets:rasterize && npx capacitor-assets generate --android",
     "data:fetch": "node scripts/data/fetch-sources.mjs",
     "data:build": "node scripts/data/build-definitions.mjs",
     "data:package": "node scripts/data/package-defs.mjs && node scripts/data/gen-attribution.mjs",
@@ -23,6 +27,7 @@
     "data:all": "npm run data:fetch && npm run data:build && npm run data:package && npm run data:report"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.1",
     "@capacitor/haptics": "^8.0.2",

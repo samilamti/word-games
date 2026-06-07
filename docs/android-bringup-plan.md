@@ -10,6 +10,16 @@ learning-system feature work, not after.
 
 ---
 
+## Progress (2026-06-07)
+
+- **Phase 1 DONE** — `@capacitor/android` installed (resolved 8.4.0; `@capacitor/core` bumped to 8.4.0, cli/ios still 8.3.1 — all within `^8.3.1`, `cap doctor` clean). `android/` scaffold generated + Gradle-synced, all 4 cross-platform plugins detected. `android/` committed; Capacitor's template `.gitignore` excludes build output + `local.properties` (machine SDK path).
+- **Phase 2 DONE** — `android:build` / `open` / `run` / `assets` npm scripts added, using the renamed **`scripts/strip-non-bundled-assets.mjs`** (now slims BOTH dictionaries and definitions to the en+pt bundled set — Option B; supersedes this plan's `strip-non-en-dicts.mjs` / en-only references).
+- **Phase 3 partial** — `android { backgroundColor }` block added to `capacitor.config.ts`. **Still Sami's decisions:** back-button per-screen semantics, `versionCode`/`versionName` scheme, Android player-name (local entry vs PGS).
+- **Phase 7 / RevenueCat — VERIFIED DROP-IN COMPATIBLE with Cap 8.** `@revenuecat/purchases-capacitor` latest **13.1.5**, peer `@capacitor/core ">=8.0.0"` (our `^8.3.1` ✓), clean **SPM** (no Podfile / no native glue), Android via the same JS API. Cap-8 support since **v12.0.0**. iOS min-target floor **15.0** — ours is **15.0 ✓**. Required API all present (`configure`/`getCustomerInfo`/`purchasePackage`/`restorePurchases`). Watch the ecosystem-wide Cap-8 SPM "plugin products not exposed in Xcode" bug (ionic-team/capacitor#8325) during `cap sync` — not RC-specific.
+- **NOT done (needs env/device or Sami):** Phase 0 `ANDROID_HOME`/PATH + AVD, Phase 5 on-device smoke test, Phase 6 Play Console (the 14-day closed-testing clock — the long pole). `cap add`/`sync`/`doctor` ran fine without `ANDROID_HOME`, but a Gradle **build/run** needs the SDK env.
+
+---
+
 ## Current state (verified 2026-05-31)
 
 - Capacitor **8.3.1** app, **iOS only**. No `android/` dir, no `@capacitor/android` dep.
@@ -56,12 +66,12 @@ learning-system feature work, not after.
 
 Add to `package.json` `scripts`:
 ```json
-"android:build": "CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync android",
+"android:build": "CAPACITOR=1 npm run build && node scripts/strip-non-bundled-assets.mjs && npx cap sync android",
 "android:open": "npx cap open android",
 "android:run": "npm run android:build && npx cap run android",
 "android:assets": "npm run assets:rasterize && npx capacitor-assets generate --android"
 ```
-*(Reuse `strip-non-en-dicts.mjs` unchanged; just update its header comment to say "iOS/Android".)*
+*(Uses the renamed `strip-non-bundled-assets.mjs` — already slims both dictionaries and definitions to the en+pt bundled set. **Added 2026-06-07.**)*
 
 ## Phase 3 — Config & Android-specific code
 
