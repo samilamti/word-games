@@ -12,6 +12,8 @@
  * Blank/wild tiles are tracked separately on the rack/bag side.
  */
 
+import type { EnemyType } from '../types/enemies.ts';
+
 export type LocaleCode = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'it';
 
 export interface LetterDef {
@@ -108,6 +110,66 @@ export interface UIStrings {
   paywallErrorBuy: string;
   paywallErrorRestore: string;
   paywallErrorGeneric: string;
+  // Status / combat messages
+  placeTilesFirst: string;
+  spellResult: string; // {words}, {n}
+  disputedTag: string;
+  tilesReturned: string;
+  // Placement errors (validatePlacement)
+  errNotStraight: string;
+  errNotContiguous: string;
+  errFirstCenter: string;
+  errMustConnect: string;
+  errNoWords: string;
+  // Beta feedback
+  feedbackThanks: string;
+  feedbackCategory: string;
+  feedbackYour: string;
+  feedbackPlaceholder: string;
+  feedbackSend: string;
+  feedbackCatBug: string;
+  feedbackCatSuggestion: string;
+  feedbackCatWord: string;
+  feedbackCatOther: string;
+  // Dispute dialog
+  disputeTitle: string;
+  disputeQuestion: string; // {word} — bolded + quoted at the call site
+  disputeMeaning: string;
+  disputePlaceholder: string;
+  disputeSubmit: string;
+  disputeFooter1: string;
+  disputeFooter2: string;
+  // Leaderboard
+  leaderboardView: string;
+  sortDamage: string;
+  sortBestHit: string;
+  sortLongest: string;
+  sortTurns: string;
+  sortDamageTip: string;
+  sortBestHitTip: string;
+  sortLongestTip: string;
+  sortTurnsTip: string;
+  clearLeaderboardConfirm: string;
+  leaderboardEmpty: string;
+  colEnemy: string;
+  colDmg: string;
+  colBest: string;
+  colWord: string;
+  // HUD score breakdown
+  hudWordDmg: string; // {word}, {n}
+  hudBonus: string; // {n}
+  hudTotalDamage: string; // {n}
+  // Accessibility labels
+  changeLanguage: string;
+  blankTile: string;
+}
+
+/** Per-enemy display strings. Keyed by EnemyType so `tsc` enforces a
+ *  translation for every enemy in every locale (campaign flavor, not UI
+ *  chrome — localized on request). */
+export interface EnemyStrings {
+  name: string;
+  tagline: string;
 }
 
 export interface LocaleDef {
@@ -119,6 +181,7 @@ export interface LocaleDef {
   wildCount: number;     // number of blank tiles
   dictUrl: string;       // public path or CDN URL for the word list
   ui: UIStrings;
+  enemies: Record<EnemyType, EnemyStrings>;
 }
 
 // ─── English (Scrabble TWL/SOWPODS) ───────────────────────────────────────
@@ -239,6 +302,58 @@ const EN: LocaleDef = {
     paywallErrorBuy: 'Purchase was not completed.',
     paywallErrorRestore: 'No previous purchase found to restore.',
     paywallErrorGeneric: 'Something went wrong. Please try again.',
+    placeTilesFirst: 'Place some tiles first!',
+    spellResult: '{words}! {n} damage!',
+    disputedTag: '(disputed)',
+    tilesReturned: 'Tiles returned to rack.',
+    errNotStraight: 'Tiles must be in a straight line',
+    errNotContiguous: 'Tiles must be contiguous (no gaps)',
+    errFirstCenter: 'First word must cover the center square',
+    errMustConnect: 'Word must connect to an existing tile',
+    errNoWords: 'No valid words formed',
+    feedbackThanks: 'Thanks for your feedback!',
+    feedbackCategory: 'Category',
+    feedbackYour: 'Your feedback',
+    feedbackPlaceholder: 'Tell us what you think...',
+    feedbackSend: 'Send Feedback',
+    feedbackCatBug: 'Bug Report',
+    feedbackCatSuggestion: 'Suggestion',
+    feedbackCatWord: 'Word Issue',
+    feedbackCatOther: 'Other',
+    disputeTitle: 'Dispute Word',
+    disputeQuestion: 'You think {word} is a valid word?',
+    disputeMeaning: 'What does it mean? (optional)',
+    disputePlaceholder: 'e.g. A type of bird found in South America...',
+    disputeSubmit: 'Submit Dispute',
+    disputeFooter1: 'The word will be accepted and you\'ll receive points.',
+    disputeFooter2: 'Your dispute will be reviewed by our team.',
+    leaderboardView: 'View leaderboard',
+    sortDamage: 'Damage',
+    sortBestHit: 'Best Hit',
+    sortLongest: 'Longest',
+    sortTurns: 'Turns',
+    sortDamageTip: 'Total damage dealt this run',
+    sortBestHitTip: 'Biggest single-turn damage',
+    sortLongestTip: 'Longest word played',
+    sortTurnsTip: 'Fewest turns to victory',
+    clearLeaderboardConfirm: 'Clear all leaderboard entries on this device? This cannot be undone.',
+    leaderboardEmpty: 'No completed runs yet. Defeat an enemy to record your first run!',
+    colEnemy: 'Enemy',
+    colDmg: 'Dmg',
+    colBest: 'Best',
+    colWord: 'Word',
+    hudWordDmg: '{word}: {n} dmg',
+    hudBonus: 'Bonus: +{n}',
+    hudTotalDamage: 'Total: {n} damage',
+    changeLanguage: 'Change language',
+    blankTile: 'blank tile',
+  },
+  enemies: {
+    goblin: { name: 'Ink Goblin', tagline: 'A scrappy little scribbler with a poisoned pen.' },
+    orc: { name: 'Brute Orc', tagline: 'Tusked, axe-handed, and unimpressed by your vocabulary.' },
+    troll: { name: 'Cave Troll', tagline: 'Bigger than a bookshelf and twice as stubborn.' },
+    undead: { name: 'Risen Undead', tagline: 'Whispering forgotten words from a forgotten tongue.' },
+    wraith: { name: 'Shadow Wraith', tagline: 'A grief without a body, hungry for sentences.' },
   },
 };
 
@@ -362,6 +477,58 @@ const ES: LocaleDef = {
     paywallErrorBuy: 'La compra no se completó.',
     paywallErrorRestore: 'No se encontró ninguna compra previa para restaurar.',
     paywallErrorGeneric: 'Algo salió mal. Inténtalo de nuevo.',
+    placeTilesFirst: '¡Coloca algunas fichas primero!',
+    spellResult: '¡{words}! {n} de daño!',
+    disputedTag: '(disputada)',
+    tilesReturned: 'Fichas devueltas al atril.',
+    errNotStraight: 'Las fichas deben estar en línea recta',
+    errNotContiguous: 'Las fichas deben ser contiguas (sin huecos)',
+    errFirstCenter: 'La primera palabra debe cubrir la casilla central',
+    errMustConnect: 'La palabra debe conectar con una ficha existente',
+    errNoWords: 'No se formaron palabras válidas',
+    feedbackThanks: '¡Gracias por tus comentarios!',
+    feedbackCategory: 'Categoría',
+    feedbackYour: 'Tus comentarios',
+    feedbackPlaceholder: 'Cuéntanos qué piensas...',
+    feedbackSend: 'Enviar comentarios',
+    feedbackCatBug: 'Informe de error',
+    feedbackCatSuggestion: 'Sugerencia',
+    feedbackCatWord: 'Problema de palabra',
+    feedbackCatOther: 'Otro',
+    disputeTitle: 'Disputar palabra',
+    disputeQuestion: '¿Crees que {word} es una palabra válida?',
+    disputeMeaning: '¿Qué significa? (opcional)',
+    disputePlaceholder: 'p. ej. Un tipo de ave de Sudamérica...',
+    disputeSubmit: 'Enviar disputa',
+    disputeFooter1: 'La palabra se aceptará y recibirás puntos.',
+    disputeFooter2: 'Tu disputa será revisada por nuestro equipo.',
+    leaderboardView: 'Ver clasificación',
+    sortDamage: 'Daño',
+    sortBestHit: 'Mejor golpe',
+    sortLongest: 'Más larga',
+    sortTurns: 'Turnos',
+    sortDamageTip: 'Daño total infligido en esta partida',
+    sortBestHitTip: 'Mayor daño en un solo turno',
+    sortLongestTip: 'Palabra más larga jugada',
+    sortTurnsTip: 'Menos turnos para la victoria',
+    clearLeaderboardConfirm: '¿Borrar toda la clasificación de este dispositivo? Esto no se puede deshacer.',
+    leaderboardEmpty: 'Aún no hay partidas completadas. ¡Derrota a un enemigo para registrar tu primera partida!',
+    colEnemy: 'Enemigo',
+    colDmg: 'Daño',
+    colBest: 'Mejor',
+    colWord: 'Palabra',
+    hudWordDmg: '{word}: {n} de daño',
+    hudBonus: 'Bonus: +{n}',
+    hudTotalDamage: 'Total: {n} de daño',
+    changeLanguage: 'Cambiar idioma',
+    blankTile: 'ficha en blanco',
+  },
+  enemies: {
+    goblin: { name: 'Goblin de Tinta', tagline: 'Un pequeño garabateador peleón con una pluma envenenada.' },
+    orc: { name: 'Orco Bruto', tagline: 'Con colmillos, hacha en mano y nada impresionado por tu vocabulario.' },
+    troll: { name: 'Trol de las Cavernas', tagline: 'Más grande que una estantería y el doble de terco.' },
+    undead: { name: 'No-Muerto Resucitado', tagline: 'Susurrando palabras olvidadas en una lengua olvidada.' },
+    wraith: { name: 'Espectro de Sombra', tagline: 'Un duelo sin cuerpo, hambriento de frases.' },
   },
 };
 
@@ -483,6 +650,58 @@ const FR: LocaleDef = {
     paywallErrorBuy: 'L\'achat n\'a pas été finalisé.',
     paywallErrorRestore: 'Aucun achat précédent à restaurer.',
     paywallErrorGeneric: 'Une erreur s\'est produite. Réessaie.',
+    placeTilesFirst: 'Place d\'abord quelques jetons !',
+    spellResult: '{words} ! {n} dégâts !',
+    disputedTag: '(contesté)',
+    tilesReturned: 'Jetons remis sur le chevalet.',
+    errNotStraight: 'Les jetons doivent être alignés',
+    errNotContiguous: 'Les jetons doivent se suivre (sans trous)',
+    errFirstCenter: 'Le premier mot doit couvrir la case centrale',
+    errMustConnect: 'Le mot doit toucher un jeton existant',
+    errNoWords: 'Aucun mot valide formé',
+    feedbackThanks: 'Merci pour tes commentaires !',
+    feedbackCategory: 'Catégorie',
+    feedbackYour: 'Tes commentaires',
+    feedbackPlaceholder: 'Dis-nous ce que tu en penses...',
+    feedbackSend: 'Envoyer',
+    feedbackCatBug: 'Rapport de bug',
+    feedbackCatSuggestion: 'Suggestion',
+    feedbackCatWord: 'Problème de mot',
+    feedbackCatOther: 'Autre',
+    disputeTitle: 'Contester le mot',
+    disputeQuestion: 'Tu penses que {word} est un mot valide ?',
+    disputeMeaning: 'Que signifie-t-il ? (facultatif)',
+    disputePlaceholder: 'ex. Un type d\'oiseau d\'Amérique du Sud...',
+    disputeSubmit: 'Envoyer la contestation',
+    disputeFooter1: 'Le mot sera accepté et tu recevras des points.',
+    disputeFooter2: 'Ta contestation sera examinée par notre équipe.',
+    leaderboardView: 'Voir le classement',
+    sortDamage: 'Dégâts',
+    sortBestHit: 'Meilleur coup',
+    sortLongest: 'Plus long',
+    sortTurns: 'Tours',
+    sortDamageTip: 'Dégâts totaux infligés dans cette partie',
+    sortBestHitTip: 'Plus gros dégâts en un seul tour',
+    sortLongestTip: 'Mot le plus long joué',
+    sortTurnsTip: 'Moins de tours jusqu\'à la victoire',
+    clearLeaderboardConfirm: 'Effacer tout le classement sur cet appareil ? Cette action est irréversible.',
+    leaderboardEmpty: 'Aucune partie terminée. Bats un ennemi pour enregistrer ta première partie !',
+    colEnemy: 'Ennemi',
+    colDmg: 'Dég.',
+    colBest: 'Meilleur',
+    colWord: 'Mot',
+    hudWordDmg: '{word} : {n} dég.',
+    hudBonus: 'Bonus : +{n}',
+    hudTotalDamage: 'Total : {n} dégâts',
+    changeLanguage: 'Changer de langue',
+    blankTile: 'jeton blanc',
+  },
+  enemies: {
+    goblin: { name: 'Gobelin d\'Encre', tagline: 'Un petit gribouilleur hargneux à la plume empoisonnée.' },
+    orc: { name: 'Orc Brutal', tagline: 'Défenses en avant, hache à la main, et pas impressionné par ton vocabulaire.' },
+    troll: { name: 'Troll des Cavernes', tagline: 'Plus grand qu\'une bibliothèque et deux fois plus têtu.' },
+    undead: { name: 'Mort-Vivant Ressuscité', tagline: 'Murmurant des mots oubliés dans une langue oubliée.' },
+    wraith: { name: 'Spectre d\'Ombre', tagline: 'Un chagrin sans corps, affamé de phrases.' },
   },
 };
 
@@ -607,6 +826,58 @@ const DE: LocaleDef = {
     paywallErrorBuy: 'Der Kauf wurde nicht abgeschlossen.',
     paywallErrorRestore: 'Kein früherer Kauf zum Wiederherstellen gefunden.',
     paywallErrorGeneric: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+    placeTilesFirst: 'Lege zuerst ein paar Steine!',
+    spellResult: '{words}! {n} Schaden!',
+    disputedTag: '(angefochten)',
+    tilesReturned: 'Steine zurück in den Halter.',
+    errNotStraight: 'Steine müssen in einer Reihe liegen',
+    errNotContiguous: 'Steine müssen lückenlos aneinander liegen',
+    errFirstCenter: 'Das erste Wort muss das Mittelfeld bedecken',
+    errMustConnect: 'Das Wort muss an einen vorhandenen Stein anschließen',
+    errNoWords: 'Keine gültigen Wörter gebildet',
+    feedbackThanks: 'Danke für dein Feedback!',
+    feedbackCategory: 'Kategorie',
+    feedbackYour: 'Dein Feedback',
+    feedbackPlaceholder: 'Sag uns, was du denkst...',
+    feedbackSend: 'Feedback senden',
+    feedbackCatBug: 'Fehlerbericht',
+    feedbackCatSuggestion: 'Vorschlag',
+    feedbackCatWord: 'Wortproblem',
+    feedbackCatOther: 'Sonstiges',
+    disputeTitle: 'Wort anfechten',
+    disputeQuestion: 'Du meinst, {word} ist ein gültiges Wort?',
+    disputeMeaning: 'Was bedeutet es? (optional)',
+    disputePlaceholder: 'z. B. Eine Vogelart aus Südamerika...',
+    disputeSubmit: 'Anfechtung senden',
+    disputeFooter1: 'Das Wort wird akzeptiert und du erhältst Punkte.',
+    disputeFooter2: 'Deine Anfechtung wird von unserem Team geprüft.',
+    leaderboardView: 'Bestenliste ansehen',
+    sortDamage: 'Schaden',
+    sortBestHit: 'Bester Treffer',
+    sortLongest: 'Längstes',
+    sortTurns: 'Züge',
+    sortDamageTip: 'Gesamtschaden in diesem Durchlauf',
+    sortBestHitTip: 'Größter Schaden in einem Zug',
+    sortLongestTip: 'Längstes gespieltes Wort',
+    sortTurnsTip: 'Wenigste Züge bis zum Sieg',
+    clearLeaderboardConfirm: 'Alle Bestenlisten-Einträge auf diesem Gerät löschen? Dies kann nicht rückgängig gemacht werden.',
+    leaderboardEmpty: 'Noch keine abgeschlossenen Durchläufe. Besiege einen Gegner, um deinen ersten Durchlauf einzutragen!',
+    colEnemy: 'Gegner',
+    colDmg: 'Sch.',
+    colBest: 'Bester',
+    colWord: 'Wort',
+    hudWordDmg: '{word}: {n} Sch.',
+    hudBonus: 'Bonus: +{n}',
+    hudTotalDamage: 'Gesamt: {n} Schaden',
+    changeLanguage: 'Sprache ändern',
+    blankTile: 'leerer Stein',
+  },
+  enemies: {
+    goblin: { name: 'Tinten-Goblin', tagline: 'Ein kampflustiger kleiner Schreiberling mit vergifteter Feder.' },
+    orc: { name: 'Brutaler Ork', tagline: 'Mit Hauern, Axt in der Hand und unbeeindruckt von deinem Wortschatz.' },
+    troll: { name: 'Höhlentroll', tagline: 'Größer als ein Bücherregal und doppelt so stur.' },
+    undead: { name: 'Auferstandener Untoter', tagline: 'Flüstert vergessene Worte aus einer vergessenen Sprache.' },
+    wraith: { name: 'Schattengespenst', tagline: 'Ein Kummer ohne Körper, hungrig nach Sätzen.' },
   },
 };
 
@@ -726,6 +997,58 @@ const PT: LocaleDef = {
     paywallErrorBuy: 'A compra não foi concluída.',
     paywallErrorRestore: 'Não foi encontrada nenhuma compra anterior para restaurar.',
     paywallErrorGeneric: 'Algo correu mal. Tenta novamente.',
+    placeTilesFirst: 'Coloca primeiro algumas peças!',
+    spellResult: '{words}! {n} de dano!',
+    disputedTag: '(contestada)',
+    tilesReturned: 'Peças devolvidas ao atril.',
+    errNotStraight: 'As peças têm de estar em linha reta',
+    errNotContiguous: 'As peças têm de ser contíguas (sem espaços)',
+    errFirstCenter: 'A primeira palavra tem de cobrir a casa central',
+    errMustConnect: 'A palavra tem de ligar a uma peça existente',
+    errNoWords: 'Nenhuma palavra válida formada',
+    feedbackThanks: 'Obrigado pelos teus comentários!',
+    feedbackCategory: 'Categoria',
+    feedbackYour: 'Os teus comentários',
+    feedbackPlaceholder: 'Diz-nos o que achas...',
+    feedbackSend: 'Enviar comentários',
+    feedbackCatBug: 'Relatório de erro',
+    feedbackCatSuggestion: 'Sugestão',
+    feedbackCatWord: 'Problema de palavra',
+    feedbackCatOther: 'Outro',
+    disputeTitle: 'Contestar palavra',
+    disputeQuestion: 'Achas que {word} é uma palavra válida?',
+    disputeMeaning: 'O que significa? (opcional)',
+    disputePlaceholder: 'p. ex. Um tipo de ave da América do Sul...',
+    disputeSubmit: 'Enviar contestação',
+    disputeFooter1: 'A palavra será aceite e receberás pontos.',
+    disputeFooter2: 'A tua contestação será revista pela nossa equipa.',
+    leaderboardView: 'Ver classificação',
+    sortDamage: 'Dano',
+    sortBestHit: 'Melhor golpe',
+    sortLongest: 'Mais longa',
+    sortTurns: 'Turnos',
+    sortDamageTip: 'Dano total causado nesta partida',
+    sortBestHitTip: 'Maior dano num único turno',
+    sortLongestTip: 'Palavra mais longa jogada',
+    sortTurnsTip: 'Menos turnos até à vitória',
+    clearLeaderboardConfirm: 'Limpar toda a classificação neste dispositivo? Isto não pode ser anulado.',
+    leaderboardEmpty: 'Ainda não há partidas concluídas. Derrota um inimigo para registar a tua primeira partida!',
+    colEnemy: 'Inimigo',
+    colDmg: 'Dano',
+    colBest: 'Melhor',
+    colWord: 'Palavra',
+    hudWordDmg: '{word}: {n} de dano',
+    hudBonus: 'Bónus: +{n}',
+    hudTotalDamage: 'Total: {n} de dano',
+    changeLanguage: 'Mudar idioma',
+    blankTile: 'peça em branco',
+  },
+  enemies: {
+    goblin: { name: 'Goblin de Tinta', tagline: 'Um pequeno rabiscador brigão com uma pena envenenada.' },
+    orc: { name: 'Orc Bruto', tagline: 'De presas, machado na mão e nada impressionado com o teu vocabulário.' },
+    troll: { name: 'Troll das Cavernas', tagline: 'Maior que uma estante e o dobro de teimoso.' },
+    undead: { name: 'Morto-Vivo Ressurgido', tagline: 'Sussurrando palavras esquecidas numa língua esquecida.' },
+    wraith: { name: 'Espectro das Sombras', tagline: 'Um luto sem corpo, faminto por frases.' },
   },
 };
 
@@ -842,6 +1165,58 @@ const IT: LocaleDef = {
     paywallErrorBuy: 'L\'acquisto non è stato completato.',
     paywallErrorRestore: 'Nessun acquisto precedente da ripristinare.',
     paywallErrorGeneric: 'Qualcosa è andato storto. Riprova.',
+    placeTilesFirst: 'Posiziona prima delle tessere!',
+    spellResult: '{words}! {n} danni!',
+    disputedTag: '(contestata)',
+    tilesReturned: 'Tessere rimesse sul leggio.',
+    errNotStraight: 'Le tessere devono essere in linea retta',
+    errNotContiguous: 'Le tessere devono essere contigue (senza spazi)',
+    errFirstCenter: 'La prima parola deve coprire la casella centrale',
+    errMustConnect: 'La parola deve collegarsi a una tessera esistente',
+    errNoWords: 'Nessuna parola valida formata',
+    feedbackThanks: 'Grazie per il tuo feedback!',
+    feedbackCategory: 'Categoria',
+    feedbackYour: 'Il tuo feedback',
+    feedbackPlaceholder: 'Dicci cosa ne pensi...',
+    feedbackSend: 'Invia feedback',
+    feedbackCatBug: 'Segnalazione bug',
+    feedbackCatSuggestion: 'Suggerimento',
+    feedbackCatWord: 'Problema parola',
+    feedbackCatOther: 'Altro',
+    disputeTitle: 'Contestare la parola',
+    disputeQuestion: 'Pensi che {word} sia una parola valida?',
+    disputeMeaning: 'Cosa significa? (facoltativo)',
+    disputePlaceholder: 'es. Un tipo di uccello del Sud America...',
+    disputeSubmit: 'Invia contestazione',
+    disputeFooter1: 'La parola verrà accettata e riceverai punti.',
+    disputeFooter2: 'La tua contestazione sarà esaminata dal nostro team.',
+    leaderboardView: 'Vedi classifica',
+    sortDamage: 'Danni',
+    sortBestHit: 'Colpo migliore',
+    sortLongest: 'Più lunga',
+    sortTurns: 'Turni',
+    sortDamageTip: 'Danni totali inflitti in questa partita',
+    sortBestHitTip: 'Danno maggiore in un solo turno',
+    sortLongestTip: 'Parola più lunga giocata',
+    sortTurnsTip: 'Meno turni alla vittoria',
+    clearLeaderboardConfirm: 'Cancellare tutta la classifica su questo dispositivo? L\'azione è irreversibile.',
+    leaderboardEmpty: 'Nessuna partita completata. Sconfiggi un nemico per registrare la tua prima partita!',
+    colEnemy: 'Nemico',
+    colDmg: 'Dan.',
+    colBest: 'Migliore',
+    colWord: 'Parola',
+    hudWordDmg: '{word}: {n} danni',
+    hudBonus: 'Bonus: +{n}',
+    hudTotalDamage: 'Totale: {n} danni',
+    changeLanguage: 'Cambia lingua',
+    blankTile: 'tessera vuota',
+  },
+  enemies: {
+    goblin: { name: 'Goblin d\'Inchiostro', tagline: 'Un piccolo scribacchino agguerrito con una penna avvelenata.' },
+    orc: { name: 'Orco Bruto', tagline: 'Con zanne, ascia in pugno e per niente colpito dal tuo vocabolario.' },
+    troll: { name: 'Troll delle Caverne', tagline: 'Più grande di una libreria e il doppio più testardo.' },
+    undead: { name: 'Non-Morto Risorto', tagline: 'Sussurra parole dimenticate in una lingua dimenticata.' },
+    wraith: { name: 'Spettro d\'Ombra', tagline: 'Un dolore senza corpo, affamato di frasi.' },
   },
 };
 

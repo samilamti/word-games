@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 interface Props {
   onClose: () => void;
@@ -8,9 +9,14 @@ interface Props {
 export function DisputeDialog({ onClose }: Props) {
   const lastRejection = useGameStore(s => s.lastRejection);
   const disputeWord = useGameStore(s => s.disputeWord);
+  const ui = useUI();
   const [definition, setDefinition] = useState('');
 
   if (!lastRejection) return null;
+
+  // The disputed word is rendered bold + quoted; the surrounding sentence is
+  // localized with a {word} placeholder so word order stays correct per language.
+  const [qBefore, qAfter] = ui.disputeQuestion.split('{word}');
 
   const handleSubmit = () => {
     disputeWord(definition.trim());
@@ -45,20 +51,21 @@ export function DisputeDialog({ onClose }: Props) {
         onClick={e => e.stopPropagation()}
       >
         <h3 style={{ margin: '0 0 8px', color: '#ffd54f', fontSize: 20 }}>
-          Dispute Word
+          {ui.disputeTitle}
         </h3>
         <p style={{ color: '#e0e0e0', margin: '0 0 16px', fontSize: 14 }}>
-          You think <strong style={{ color: '#ff9800' }}>"{lastRejection.word}"</strong> is
-          a valid word?
+          {qBefore}
+          <strong style={{ color: '#ff9800' }}>"{lastRejection.word}"</strong>
+          {qAfter}
         </p>
 
         <label style={{ display: 'block', color: '#aaa', fontSize: 12, marginBottom: 6 }}>
-          What does it mean? (optional)
+          {ui.disputeMeaning}
         </label>
         <textarea
           value={definition}
           onChange={e => setDefinition(e.target.value)}
-          placeholder="e.g. A type of bird found in South America..."
+          placeholder={ui.disputePlaceholder}
           rows={3}
           style={{
             width: '100%',
@@ -87,7 +94,7 @@ export function DisputeDialog({ onClose }: Props) {
               cursor: 'pointer',
             }}
           >
-            Cancel
+            {ui.cancel}
           </button>
           <button
             onClick={handleSubmit}
@@ -102,14 +109,14 @@ export function DisputeDialog({ onClose }: Props) {
               cursor: 'pointer',
             }}
           >
-            Submit Dispute
+            {ui.disputeSubmit}
           </button>
         </div>
 
         <p style={{ color: '#888', fontSize: 11, margin: '12px 0 0', textAlign: 'center' }}>
-          The word will be accepted and you'll receive points.
+          {ui.disputeFooter1}
           <br />
-          Your dispute will be reviewed by our team.
+          {ui.disputeFooter2}
         </p>
       </div>
     </div>

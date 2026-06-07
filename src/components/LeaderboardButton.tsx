@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LeaderboardModal } from './LeaderboardModal.tsx';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Floating bottom-left button (mirror of the bottom-right FeedbackButton)
@@ -8,13 +9,14 @@ import { LeaderboardModal } from './LeaderboardModal.tsx';
  */
 export function LeaderboardButton() {
   const [open, setOpen] = useState(false);
+  const ui = useUI();
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="View leaderboard"
-        title="Leaderboard"
+        aria-label={ui.leaderboardView}
+        title={ui.leaderboard}
         style={{
           position: 'fixed',
           bottom: 'calc(20px + env(safe-area-inset-bottom))',

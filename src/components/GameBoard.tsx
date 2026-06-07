@@ -4,6 +4,7 @@ import type { BoardCell, PremiumType } from '../types/index.ts';
 import { BOARD_SIZE } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 const GAP = 2;
 
@@ -48,9 +49,11 @@ interface CellProps {
    *  enemy tiles when reduce-motion is off); undefined = no drop animation. */
   dropIndex?: number;
   onClick: (row: number, col: number) => void;
+  /** Localized aria-label for the blank/wild tile marker. */
+  blankTileLabel: string;
 }
 
-function Cell({ cell, isPending, dropIndex, onClick }: CellProps) {
+function Cell({ cell, isPending, dropIndex, onClick, blankTileLabel }: CellProps) {
   const handleClick = useCallback(() => {
     onClick(cell.row, cell.col);
   }, [cell.row, cell.col, onClick]);
@@ -123,7 +126,7 @@ function Cell({ cell, isPending, dropIndex, onClick }: CellProps) {
           <span style={{ fontStyle: isWild ? 'italic' : 'normal' }}>{cell.tile!.letter}</span>
           {isWild && (
             <span
-              aria-label="blank tile"
+              aria-label={blankTileLabel}
               style={{
                 position: 'absolute',
                 top: 1,
@@ -161,6 +164,7 @@ export function GameBoard() {
   const removePendingTile = useGameStore(s => s.removePendingTile);
   const lastEnemyDropTurn = useGameStore(s => s.lastEnemyDropTurn);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
+  const ui = useUI();
 
   const pendingSet = new Set(pendingTiles.map(p => `${p.row},${p.col}`));
 
@@ -211,6 +215,7 @@ export function GameBoard() {
           isPending={pendingSet.has(`${cell.row},${cell.col}`)}
           dropIndex={dropIndices?.get(`${cell.row},${cell.col}`)}
           onClick={handleCellClick}
+          blankTileLabel={ui.blankTile}
         />
       ))}
     </div>

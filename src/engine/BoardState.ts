@@ -257,9 +257,21 @@ export function isContiguous(
   return true;
 }
 
+/** Stable, locale-free reason a placement was rejected. The `error` string
+ *  stays English (handy for dev/NPC/tests); UI callers map this `code` to a
+ *  localized message instead of matching on the English text. */
+export type PlacementErrorCode =
+  | 'NO_TILES'
+  | 'NOT_STRAIGHT'
+  | 'NOT_CONTIGUOUS'
+  | 'FIRST_CENTER'
+  | 'MUST_CONNECT'
+  | 'NO_WORDS';
+
 export interface PlacementValidation {
   valid: boolean;
   error?: string;
+  code?: PlacementErrorCode;
   formedWords: { text: string; cells: [number, number][]; direction: Direction }[];
 }
 
@@ -270,16 +282,16 @@ export function validatePlacement(
   isFirstMove: boolean,
 ): PlacementValidation {
   if (placedCells.length === 0) {
-    return { valid: false, error: 'No tiles placed', formedWords: [] };
+    return { valid: false, error: 'No tiles placed', code: 'NO_TILES', formedWords: [] };
   }
 
   const direction = getPlacementDirection(placedCells);
   if (!direction) {
-    return { valid: false, error: 'Tiles must be in a straight line', formedWords: [] };
+    return { valid: false, error: 'Tiles must be in a straight line', code: 'NOT_STRAIGHT', formedWords: [] };
   }
 
   if (!isContiguous(grid, placedCells, direction)) {
-    return { valid: false, error: 'Tiles must be contiguous (no gaps)', formedWords: [] };
+    return { valid: false, error: 'Tiles must be contiguous (no gaps)', code: 'NOT_CONTIGUOUS', formedWords: [] };
   }
 
   if (!isConnected(grid, placedCells, isFirstMove)) {
@@ -288,13 +300,14 @@ export function validatePlacement(
       error: isFirstMove
         ? 'First word must cover the center square'
         : 'Word must connect to an existing tile',
+      code: isFirstMove ? 'FIRST_CENTER' : 'MUST_CONNECT',
       formedWords: [],
     };
   }
 
   const formedWords = getFormedWords(grid, placedCells);
   if (formedWords.length === 0) {
-    return { valid: false, error: 'No valid words formed', formedWords: [] };
+    return { valid: false, error: 'No valid words formed', code: 'NO_WORDS', formedWords: [] };
   }
 
   return { valid: true, formedWords };

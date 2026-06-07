@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Minimal status strip below the action bar. HP, enemy name, ATK/DEF,
@@ -14,6 +15,7 @@ export function CombatHUD() {
   const message = useGameStore(s => s.message);
   const lastScore = useGameStore(s => s.lastScore);
   const tileBag = useGameStore(s => s.tileBag);
+  const ui = useUI();
 
   const hasBreakdown = lastScore && lastScore.words.length > 0;
 
@@ -54,22 +56,22 @@ export function CombatHUD() {
         <div style={{ fontSize: 11, color: '#aaa', padding: '0 4px' }}>
           {lastScore.words.map((w, i) => (
             <div key={i}>
-              {w.text}: {w.finalScore} dmg
+              {ui.hudWordDmg.replace('{word}', w.text).replace('{n}', String(w.finalScore))}
               {w.wordMultiplier > 1 ? ` (x${w.wordMultiplier})` : ''}
             </div>
           ))}
           {lastScore.mechanicBonus > 0 && (
-            <div style={{ color: '#ffd54f' }}>Bonus: +{lastScore.mechanicBonus}</div>
+            <div style={{ color: '#ffd54f' }}>{ui.hudBonus.replace('{n}', String(lastScore.mechanicBonus))}</div>
           )}
           <div style={{ fontWeight: 'bold', color: '#ff9800', marginTop: 2 }}>
-            Total: {lastScore.totalDamage} damage
+            {ui.hudTotalDamage.replace('{n}', String(lastScore.totalDamage))}
           </div>
         </div>
       )}
 
       {/* Tile bag remaining — small footer */}
       <div style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>
-        {tileBag.remaining} tiles left
+        {tileBag.remaining} {ui.tilesLeft}
       </div>
     </div>
   );

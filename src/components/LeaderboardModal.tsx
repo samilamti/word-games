@@ -1,28 +1,32 @@
 import { useState, useMemo } from 'react';
 import { getRuns, sortRuns, clearRuns } from '../leaderboard/leaderboard.ts';
 import type { RunRecord, SortKey } from '../leaderboard/leaderboard.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 interface Props {
   onClose: () => void;
 }
 
-const SORT_OPTIONS: { key: SortKey; label: string; tooltip: string }[] = [
-  { key: 'totalDamage', label: 'Damage', tooltip: 'Total damage dealt this run' },
-  { key: 'highestSingleHit', label: 'Best Hit', tooltip: 'Biggest single-turn damage' },
-  { key: 'longestWord', label: 'Longest', tooltip: 'Longest word played' },
-  { key: 'turns', label: 'Turns', tooltip: 'Fewest turns to victory' },
-];
+const SORT_KEYS: SortKey[] = ['totalDamage', 'highestSingleHit', 'longestWord', 'turns'];
 
 export function LeaderboardModal({ onClose }: Props) {
+  const ui = useUI();
   const [sortKey, setSortKey] = useState<SortKey>('totalDamage');
   const [version, setVersion] = useState(0); // force re-read after clear
+
+  const sortMeta: Record<SortKey, { label: string; tooltip: string }> = {
+    totalDamage: { label: ui.sortDamage, tooltip: ui.sortDamageTip },
+    highestSingleHit: { label: ui.sortBestHit, tooltip: ui.sortBestHitTip },
+    longestWord: { label: ui.sortLongest, tooltip: ui.sortLongestTip },
+    turns: { label: ui.sortTurns, tooltip: ui.sortTurnsTip },
+  };
 
   const sorted = useMemo(() => sortRuns(getRuns(), sortKey).slice(0, 10),
                          [sortKey, version]);
   const isEmpty = sorted.length === 0;
 
   const handleClear = () => {
-    if (confirm('Clear all leaderboard entries on this device? This cannot be undone.')) {
+    if (confirm(ui.clearLeaderboardConfirm)) {
       clearRuns();
       setVersion(v => v + 1);
     }
@@ -57,7 +61,7 @@ export function LeaderboardModal({ onClose }: Props) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 22 }}>
-            🏆 Leaderboard
+            🏆 {ui.leaderboard}
           </h3>
           <button
             onClick={onClose}
@@ -71,28 +75,28 @@ export function LeaderboardModal({ onClose }: Props) {
               cursor: 'pointer',
             }}
           >
-            Close
+            {ui.close}
           </button>
         </div>
 
         {/* Sort tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
-          {SORT_OPTIONS.map(opt => (
+          {SORT_KEYS.map(key => (
             <button
-              key={opt.key}
-              onClick={() => setSortKey(opt.key)}
-              title={opt.tooltip}
+              key={key}
+              onClick={() => setSortKey(key)}
+              title={sortMeta[key].tooltip}
               style={{
                 padding: '6px 12px',
                 fontSize: 12,
-                backgroundColor: sortKey === opt.key ? '#ff9800' : '#16162a',
-                color: sortKey === opt.key ? '#fff' : '#aaa',
-                border: `1px solid ${sortKey === opt.key ? '#ff9800' : '#3a3a5c'}`,
+                backgroundColor: sortKey === key ? '#ff9800' : '#16162a',
+                color: sortKey === key ? '#fff' : '#aaa',
+                border: `1px solid ${sortKey === key ? '#ff9800' : '#3a3a5c'}`,
                 borderRadius: 14,
                 cursor: 'pointer',
               }}
             >
-              {opt.label}
+              {sortMeta[key].label}
             </button>
           ))}
         </div>
@@ -107,18 +111,18 @@ export function LeaderboardModal({ onClose }: Props) {
               fontStyle: 'italic',
             }}
           >
-            No completed runs yet. Defeat an enemy to record your first run!
+            {ui.leaderboardEmpty}
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ color: '#888', borderBottom: '1px solid #3a3a5c' }}>
                 <th style={{ textAlign: 'left', padding: '6px 4px' }}>#</th>
-                <th style={{ textAlign: 'left', padding: '6px 4px' }}>Enemy</th>
-                <th style={{ textAlign: 'right', padding: '6px 4px' }}>Dmg</th>
-                <th style={{ textAlign: 'right', padding: '6px 4px' }}>Best</th>
-                <th style={{ textAlign: 'left', padding: '6px 4px' }}>Word</th>
-                <th style={{ textAlign: 'right', padding: '6px 4px' }}>Turns</th>
+                <th style={{ textAlign: 'left', padding: '6px 4px' }}>{ui.colEnemy}</th>
+                <th style={{ textAlign: 'right', padding: '6px 4px' }}>{ui.colDmg}</th>
+                <th style={{ textAlign: 'right', padding: '6px 4px' }}>{ui.colBest}</th>
+                <th style={{ textAlign: 'left', padding: '6px 4px' }}>{ui.colWord}</th>
+                <th style={{ textAlign: 'right', padding: '6px 4px' }}>{ui.sortTurns}</th>
               </tr>
             </thead>
             <tbody>
@@ -159,7 +163,7 @@ export function LeaderboardModal({ onClose }: Props) {
                 cursor: 'pointer',
               }}
             >
-              Clear All
+              {ui.journalClearAll}
             </button>
           </div>
         )}

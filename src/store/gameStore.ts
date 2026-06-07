@@ -186,22 +186,24 @@ export const useGameStore = create<GameState>((set, get) => ({
   lastEnemyDropTurn: 0,
   pendingEnemyTurn: null,
   finaleAnimationDone: false,
-  message: 'Loading dictionary...',
+  message: LOCALES[initialLocale].ui.loadingDictionary,
   dictionaryLoaded: false,
   lastRejection: null,
 
   initGame: (enemyIndex = 0) => {
+    const ui = LOCALES[get().locale].ui;
     const idx = Math.max(0, Math.min(ENEMY_CATALOG.length - 1, enemyIndex));
     const def = ENEMY_CATALOG[idx];
+    const enemyStrings = LOCALES[get().locale].enemies[def.type];
     const enemy: EnemyState = {
       type: def.type,
-      name: def.name,
+      name: enemyStrings.name,
       maxHp: def.maxHp,
       hp: def.maxHp,
       attack: def.attack,
       defense: def.defense,
       spriteUrl: def.spriteUrl,
-      tagline: def.tagline,
+      tagline: enemyStrings.tagline,
       damageMultiplier: def.damageMultiplier,
       pickRank: def.pickRank,
     };
@@ -238,7 +240,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       runDamageTotal: 0,
       runHighestHit: 0,
       runLongestWord: '',
-      message: 'Your turn — spell a word!',
+      message: ui.yourTurn,
     });
   },
 
@@ -416,8 +418,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   submitWord: () => {
     const { grid, pendingTiles, enemy, turnNumber, playerAttack } = get();
+    const ui = LOCALES[get().locale].ui;
     if (pendingTiles.length === 0) {
-      return { success: false, damage: 0, error: 'Place some tiles first!' };
+      return { success: false, damage: 0, error: ui.placeTilesFirst };
     }
 
     const placedCells: [number, number][] = pendingTiles.map(p => [p.row, p.col]);
@@ -434,7 +437,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const validation = validatePlacement(grid, placedCells, isFirst);
     if (!validation.valid) {
-      return { success: false, damage: 0, error: validation.error };
+      const error =
+        validation.code === 'NOT_STRAIGHT' ? ui.errNotStraight :
+        validation.code === 'NOT_CONTIGUOUS' ? ui.errNotContiguous :
+        validation.code === 'FIRST_CENTER' ? ui.errFirstCenter :
+        validation.code === 'MUST_CONNECT' ? ui.errMustConnect :
+        validation.code === 'NO_WORDS' ? ui.errNoWords :
+        ui.placeTilesFirst; // NO_TILES / fallback
+      return { success: false, damage: 0, error };
     }
 
     // Dictionary check. Blank/wild tiles carry a literal '*' on the board, so
@@ -453,7 +463,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({
         lastRejection: { word: failedWord, formedWords, placedCells },
       });
-      return { success: false, damage: 0, error: `"${failedWord}" is not a valid word` };
+      return { success: false, damage: 0, error: `"${failedWord}" ${ui.invalidWord}` };
     }
 
     // Score calculation
@@ -499,7 +509,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastRejection: null,
       turnNumber: turnNumber + 1,
       enemy: enemy ? { ...enemy, hp: newEnemyHp } : null,
-      message: `${wordTexts}! ${totalDamage} damage!`,
+      message: ui.spellResult.replace('{words}', wordTexts).replace('{n}', String(totalDamage)),
       phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
       combatEvents: [...get().combatEvents, ...newEvents],
       runDamageTotal: get().runDamageTotal + totalDamage,
@@ -515,6 +525,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   disputeWord: (definition: string) => {
     const { lastRejection, grid, enemy, turnNumber, playerAttack } = get();
+    const ui = LOCALES[get().locale].ui;
     if (!lastRejection || !enemy) return { success: false, damage: 0 };
 
     const { formedWords, placedCells, word } = lastRejection;
@@ -572,7 +583,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastRejection: null,
       turnNumber: turnNumber + 1,
       enemy: { ...enemy, hp: newEnemyHp },
-      message: `${wordTexts}! ${totalDamage} damage! (disputed)`,
+      message: `${ui.spellResult.replace('{words}', wordTexts).replace('{n}', String(totalDamage))} ${ui.disputedTag}`,
       phase: newEnemyHp <= 0 ? 'victory' : 'enemy_turn',
       combatEvents: [...get().combatEvents, ...newEvents],
       runDamageTotal: get().runDamageTotal + totalDamage,

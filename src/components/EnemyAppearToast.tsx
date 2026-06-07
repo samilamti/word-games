@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Volatile center-screen notice that pops up whenever a new enemy spawns.
@@ -12,6 +13,7 @@ import { useGameStore } from '../store/gameStore.ts';
 export function EnemyAppearToast() {
   const enemy = useGameStore(s => s.enemy);
   const enemyAppearAt = useGameStore(s => s.enemyAppearAt);
+  const ui = useUI();
 
   if (!enemy || !enemyAppearAt) return null;
 
@@ -46,7 +48,7 @@ export function EnemyAppearToast() {
           fontWeight: 'bold',
         }}
       >
-        A WILD
+        {ui.aWild}
       </div>
       <div
         style={{
@@ -69,7 +71,7 @@ export function EnemyAppearToast() {
           fontWeight: 'bold',
         }}
       >
-        APPEARS!
+        {ui.appears}
       </div>
       <div
         style={{

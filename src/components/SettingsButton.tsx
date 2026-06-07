@@ -139,13 +139,14 @@ function SettingsModal({ onClose }: ModalProps) {
  */
 export function SettingsButton() {
   const [open, setOpen] = useState(false);
+  const ui = useUI();
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Settings"
-        title="Settings"
+        aria-label={ui.settings}
+        title={ui.settings}
         style={{
           position: 'fixed',
           top: 'calc(20px + env(safe-area-inset-top))',

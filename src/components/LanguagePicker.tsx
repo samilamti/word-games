@@ -107,6 +107,7 @@ function LanguageModal({ onClose }: ModalProps) {
 
 export function LanguagePicker() {
   const [open, setOpen] = useState(false);
+  const ui = useUI();
   const currentLocale = useGameStore(s => s.locale);
   const flag = currentLocale ? (LOCALE_LIST.find(l => l.code === currentLocale)?.flag ?? '🌐') : '🌐';
 
@@ -114,8 +115,8 @@ export function LanguagePicker() {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Change language"
-        title="Language"
+        aria-label={ui.changeLanguage}
+        title={ui.language}
         style={{
           position: 'fixed',
           top: 'calc(20px + env(safe-area-inset-top))',

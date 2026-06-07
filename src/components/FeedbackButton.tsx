@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { saveFeedback } from '../beta/feedbackService.ts';
 import type { BetaFeedback } from '../types/index.ts';
+import { useUI } from '../i18n/useUI.ts';
 
-const CATEGORIES: { value: BetaFeedback['category']; label: string }[] = [
-  { value: 'bug', label: 'Bug Report' },
-  { value: 'suggestion', label: 'Suggestion' },
-  { value: 'word', label: 'Word Issue' },
-  { value: 'other', label: 'Other' },
-];
+const CATEGORY_VALUES: BetaFeedback['category'][] = ['bug', 'suggestion', 'word', 'other'];
 
 export function FeedbackButton() {
+  const ui = useUI();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<BetaFeedback['category']>('suggestion');
   const [message, setMessage] = useState('');
   const [toast, setToast] = useState(false);
+
+  const categoryLabel = (v: BetaFeedback['category']): string =>
+    v === 'bug' ? ui.feedbackCatBug
+    : v === 'suggestion' ? ui.feedbackCatSuggestion
+    : v === 'word' ? ui.feedbackCatWord
+    : ui.feedbackCatOther;
 
   const handleSubmit = () => {
     if (!message.trim()) return;
@@ -54,7 +57,7 @@ export function FeedbackButton() {
         onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '0.85')}
       >
-        Beta Feedback
+        {ui.betaFeedback}
       </button>
 
       {/* Toast */}
@@ -73,7 +76,7 @@ export function FeedbackButton() {
             zIndex: 300,
           }}
         >
-          Thanks for your feedback!
+          {ui.feedbackThanks}
         </div>
       )}
 
@@ -106,40 +109,40 @@ export function FeedbackButton() {
             onClick={e => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 16px', color: '#ffd54f', fontSize: 20 }}>
-              Beta Feedback
+              {ui.betaFeedback}
             </h3>
 
             <label style={{ display: 'block', color: '#aaa', fontSize: 12, marginBottom: 6 }}>
-              Category
+              {ui.feedbackCategory}
             </label>
             <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-              {CATEGORIES.map(cat => (
+              {CATEGORY_VALUES.map(cat => (
                 <button
-                  key={cat.value}
-                  onClick={() => setCategory(cat.value)}
+                  key={cat}
+                  onClick={() => setCategory(cat)}
                   style={{
                     padding: '6px 14px',
                     fontSize: 13,
-                    backgroundColor: category === cat.value ? '#ff9800' : '#16162a',
-                    color: category === cat.value ? '#fff' : '#aaa',
-                    border: `1px solid ${category === cat.value ? '#ff9800' : '#3a3a5c'}`,
+                    backgroundColor: category === cat ? '#ff9800' : '#16162a',
+                    color: category === cat ? '#fff' : '#aaa',
+                    border: `1px solid ${category === cat ? '#ff9800' : '#3a3a5c'}`,
                     borderRadius: 16,
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
                 >
-                  {cat.label}
+                  {categoryLabel(cat)}
                 </button>
               ))}
             </div>
 
             <label style={{ display: 'block', color: '#aaa', fontSize: 12, marginBottom: 6 }}>
-              Your feedback
+              {ui.feedbackYour}
             </label>
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Tell us what you think..."
+              placeholder={ui.feedbackPlaceholder}
               rows={4}
               style={{
                 width: '100%',
@@ -168,7 +171,7 @@ export function FeedbackButton() {
                   cursor: 'pointer',
                 }}
               >
-                Cancel
+                {ui.cancel}
               </button>
               <button
                 onClick={handleSubmit}
@@ -184,7 +187,7 @@ export function FeedbackButton() {
                   cursor: message.trim() ? 'pointer' : 'not-allowed',
                 }}
               >
-                Send Feedback
+                {ui.feedbackSend}
               </button>
             </div>
           </div>

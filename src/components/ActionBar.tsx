@@ -30,8 +30,8 @@ export function ActionBar() {
 
   const handleRecall = useCallback(() => {
     returnPendingToRack();
-    setMessage('Tiles returned to rack.');
-  }, [returnPendingToRack, setMessage]);
+    setMessage(ui.tilesReturned);
+  }, [returnPendingToRack, setMessage, ui]);
 
   const handleConfirmExchange = useCallback(() => {
     triggerHaptic();
@@ -133,7 +133,7 @@ export function ActionBar() {
                   animation: 'pulse-border 1.5s ease-in-out infinite',
                 }}
               >
-                Dispute!
+                {ui.dispute}
               </button>
             )}
           </>
