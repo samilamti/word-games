@@ -5,14 +5,15 @@ plan docs referenced at the bottom; this is the prioritized action list._
 
 ## Where we are (done this session)
 - **Definitions delivery — Option B** code done (`4064f0d`): `DefinitionService` bundled→CDN fallback + transient-retry; `strip-non-bundled-assets.mjs` (bundle en+pt). **CDN publish still pending.**
-- **i18n** — new UI (definitions/journal/review/paywall) localized in 6 langs (`fa9cf94`); ActionBar fixed. A follow-up pass for the *existing* UI (gameStore/modals) was **in progress in the working tree** — see ⚠️.
+- **i18n** — new UI localized in 6 langs (`fa9cf94`) + the *existing*-UI follow-up (gameStore/modals + enemy content) **done & committed (`7a64229`)**. Whole project: `tsc -b` green, 27 tests pass.
 - **Android** — platform scaffolded (`67ed4d8`); RevenueCat verified Cap-8 drop-in.
 - **Billing code** wired (`fdd605e`), config-gated + dev-safe; runbook `docs/revenuecat-setup.md`.
 - **iOS IAP + RevenueCat — configured headlessly via API:** `full_unlock` @ **79 kr** in ASC (`MISSING_METADATA`); RC project `projfddee869` fully built (app `app8833052c22` ← ASC key 6368K27LRK; entitlement `unlock` ← product `full_unlock` `one_time`; current offering `default` → package `lifetime`); `VITE_RC_IOS_KEY` wired in `.env.local`.
 
 ## ⚠️ Do first next session
-1. **Finish + commit the parallel i18n work.** The working tree has uncommitted edits (`locales.ts`, `gameStore.ts`, `BoardState.ts`, `EnemyAppearToast.tsx`, `scripts/i18n-audit.mjs`). Whole-project `npx tsc -b` was **failing** — some locales were missing the ~45 newly-added keys. → complete the translations, `tsc -b` green, run `node scripts/i18n-audit.mjs src`, commit. (Use the `app-i18n` skill.)
-2. **Rotate the RevenueCat `sk_` secret** — it was pasted in chat; it's config-only, not used at runtime, so rotating has zero runtime impact.
+1. **Rotate the RevenueCat `sk_` secret** — it was pasted in chat; config-only, not used at runtime, so rotating has zero runtime impact.
+
+_(The earlier in-flight i18n pass landed as `7a64229`; `tsc -b` is green and 27 tests pass, so that risk is cleared.)_
 
 ## iOS → first sandbox purchase
 3. **IAP review screenshot** → clears `MISSING_METADATA` (Apple won't return the product to StoreKit, even in sandbox, until "Ready to Submit"). Can be uploaded via the ASC asset API, or dragged in.
