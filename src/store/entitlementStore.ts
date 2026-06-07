@@ -20,6 +20,8 @@ interface EntitlementState {
   paywallOpen: boolean;
   paywallContext: PaywallContext | null;
   setUnlocked: (v: boolean) => void;
+  /** Configure billing + load the real entitlement at launch (RevenueCat on native). */
+  hydrate: () => Promise<void>;
   openPaywall: (context: PaywallContext) => void;
   closePaywall: () => void;
 }
@@ -29,6 +31,9 @@ export const useEntitlementStore = create<EntitlementState>((set) => ({
   paywallOpen: false,
   paywallContext: null,
   setUnlocked: (v) => set({ isUnlocked: v }),
+  hydrate: async () => {
+    set({ isUnlocked: await billing.configure() });
+  },
   openPaywall: (context) => set({ paywallOpen: true, paywallContext: context }),
   closePaywall: () => set({ paywallOpen: false }),
 }));

@@ -35,6 +35,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@pixi/react": "^8.0.5",
+    "@revenuecat/purchases-capacitor": "^13.1.5",
     "pixi.js": "^8.16.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

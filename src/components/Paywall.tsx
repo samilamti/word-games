@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEntitlementStore, type PaywallContext } from '../store/entitlementStore.ts';
 import { billing } from '../billing/billing.ts';
 import { useUI } from '../i18n/useUI.ts';
@@ -22,6 +22,11 @@ export function Paywall() {
 
   const [busy, setBusy] = useState<null | 'buy' | 'restore'>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [priceLabel, setPriceLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) billing.getPriceString().then(setPriceLabel);
+  }, [open]);
 
   if (!open) return null;
 
@@ -126,7 +131,7 @@ export function Paywall() {
             opacity: busy && busy !== 'buy' ? 0.6 : 1,
           }}
         >
-          {busy === 'buy' ? ui.paywallBuying : `${ui.paywallBuy} — ${ui.paywallPriceFallback}`}
+          {busy === 'buy' ? ui.paywallBuying : `${ui.paywallBuy} — ${priceLabel ?? ui.paywallPriceFallback}`}
         </button>
 
         <button

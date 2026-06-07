@@ -4,6 +4,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useGameStore } from '../store/gameStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
+import { useEntitlementStore } from '../store/entitlementStore.ts';
 
 interface GameCenterResult {
   isAuthenticated: boolean;
@@ -24,6 +25,9 @@ const GameCenter = registerPlugin<GameCenterPlugin>('GameCenter');
 
 export async function initNative(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
+
+  // Configure RevenueCat + load the real unlock entitlement (no-op without keys).
+  void useEntitlementStore.getState().hydrate();
 
   try {
     await StatusBar.setStyle({ style: Style.Light });
