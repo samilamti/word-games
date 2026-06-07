@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DefinitionService, bucketKey, type BucketFetcher } from './DefinitionService.ts';
 
 // Fixtures mirror the REAL on-disk shape (verified against public/definitions/).
@@ -115,5 +115,102 @@ describe('DefinitionService.lookup', () => {
     await Promise.all([svc.lookup('en', 'knight'), svc.lookup('en', 'knight')]);
     await svc.lookup('en', 'knight');
     expect(calls()).toBe(1); // one fetch for en/kn despite three lookups
+  });
+});
+
+// ─── Default transport (bundled → CDN fallback) ───────────────────────────────
+// Exercise the REAL fetchBucket (no injected fetcher) by stubbing global fetch,
+// pinning the bundled→CDN fallback and the transient-vs-absent caching that
+// keeps a brief disconnect from permanently hiding a bucket's definitions.
+
+function jsonRes(body: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: (h: string) => (h.toLowerCase() === 'content-type' ? 'application/json' : null) },
+    json: async () => body,
+  } as unknown as Response;
+}
+
+/** Vite's SPA fallback for a missing static file: 200 + text/html. */
+function htmlMiss(): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: (h: string) => (h.toLowerCase() === 'content-type' ? 'text/html' : null) },
+    json: async () => {
+      throw new Error('not json');
+    },
+  } as unknown as Response;
+}
+
+function statusRes(code: number): Response {
+  return {
+    ok: code >= 200 && code < 300,
+    status: code,
+    headers: { get: () => null },
+    json: async () => ({}),
+  } as unknown as Response;
+}
+
+describe('DefinitionService default transport (bundled → CDN fallback)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('resolves from the bundle without touching the CDN', async () => {
+    const fetchMock = vi.fn(async (_url: string) =>
+      jsonRes({ knight: { s: [{ p: 'noun', g: 'a warrior' }] } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = new DefinitionService(); // default transport
+    const e = await svc.lookup('en', 'knight');
+    expect(e!.senses[0].gloss).toBe('a warrior');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('definitions/en/kn.json'); // relative = bundle
+  });
+
+  it('falls back to the CDN when the bucket is not bundled', async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url.startsWith('definitions/') ? htmlMiss() : jsonRes({ casa: { s: [{ p: 'noun', g: 'house' }] } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = new DefinitionService();
+    const e = await svc.lookup('es', 'casa');
+    expect(e!.senses[0].gloss).toBe('house');
+    expect(fetchMock).toHaveBeenCalledTimes(2); // bundle miss → CDN hit
+    expect(fetchMock.mock.calls[1][0]).toContain('/definitions/es/ca.json'); // absolute CDN url
+  });
+
+  it('returns null when a bucket is absent in both the bundle and the CDN', async () => {
+    const fetchMock = vi.fn(async (_url: string) => statusRes(404));
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = new DefinitionService();
+    expect(await svc.lookup('es', 'casa')).toBeNull();
+  });
+
+  it('caches a definitive absence — no refetch of the same bucket', async () => {
+    const fetchMock = vi.fn(async (_url: string) => statusRes(404));
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = new DefinitionService();
+    await svc.lookup('es', 'casa'); // bundle 404 → CDN 404 → null (cached)
+    await svc.lookup('es', 'casa'); // served from cache
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 2 (bundle+CDN) once, 0 the second time
+  });
+
+  it('does NOT cache a transient CDN failure — a later lookup retries and succeeds', async () => {
+    let online = false;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.startsWith('definitions/')) return htmlMiss(); // never bundled
+      if (!online) throw new TypeError('Failed to fetch'); // CDN unreachable
+      return jsonRes({ casa: { s: [{ p: 'noun', g: 'house' }] } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = new DefinitionService();
+
+    expect(await svc.lookup('es', 'casa')).toBeNull(); // offline → graceful no-def
+    online = true;
+    const e = await svc.lookup('es', 'casa'); // retries because nothing was cached
+    expect(e!.senses[0].gloss).toBe('house');
   });
 });

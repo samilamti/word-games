@@ -1,8 +1,28 @@
 # Definitions delivery — decision memo
 
-**Status:** decision needed (drafted 2026-06-06). Blocks Phase E, the iOS ship,
-and Android bring-up. Everything upstream (Phases A–D) is built and verified;
-this is the one gate left before M4.
+**Status: DECIDED — Option B (2026-06-07).** Bundle the `en`+`pt` starter set
+(the two cheapest locales: ~58 MB defs + 7 MB dicts → **69 MB native bundle**,
+under both store caps, no Android PAD); fetch `es/de/fr/it` on demand from the
+CDN, cached. Chosen on **end-user benefit** (small installs in metered-data /
+budget-device markets; `pt` makes Brazil fully offline for ~11 MB) over build
+effort — see the recommendation below for the full rationale.
+
+**Built (Phase E code, 2026-06-07):**
+- `DefinitionService` bucket transport now does bundled→CDN fallback via
+  `VITE_DEFS_CDN_BASE` (default = the dictionaries' GitHub Pages host; swap to
+  R2 via the env var, no code change), with a transient-vs-absent distinction so
+  a brief disconnect doesn't permanently hide a bucket (it retries on reconnect).
+- `scripts/strip-non-en-dicts.mjs` → `scripts/strip-non-bundled-assets.mjs`,
+  driven by one `BUNDLED_LOCALES` set that slims **both** dictionaries and
+  definitions coherently. Bundle slimming verified against a real build (69 MB).
+- +5 transport tests (15 total in `DefinitionService.test.ts`); `tsc -b` clean.
+
+**Still external / open (not buildable solo):** (1) confirm the CDN **host** —
+R2 lean vs GitHub Pages (sub-decision 1 below); (2) **publish** the 346 MB
+`public/definitions/` to it + add a `data:publish` step; (3) **Android** bring-up
+(now plain `@capacitor/android`, no PAD). The original memo follows as the record.
+
+---
 
 ## The problem
 

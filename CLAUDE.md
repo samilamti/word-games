@@ -16,7 +16,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 
 - `npm run dev` — Vite dev (port 5188)
 - `npm run build` — `tsc -b && vite build` → `dist/`
-- `npm run ios:build` — `CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync ios`
+- `npm run ios:build` — `CAPACITOR=1 npm run build && node scripts/strip-non-bundled-assets.mjs && npx cap sync ios`
 - `npm run ios:release` — full TestFlight pipeline (build→archive→export→altool); **dry-run by default**, add `-- --confirm` to ship, `-- --status` to query build states. Auto-picks the next build number from ASC. See `scripts/asc/release.mjs`.
 - `npm run ios:open` — open Xcode workspace
 - `npm run ios:assets` — rasterize SVG → PNG + `npx capacitor-assets generate --ios`
@@ -34,11 +34,11 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `src/native/init.ts` — StatusBar / SplashScreen / Game Center auth / Haptics
 - `ios/App/App/GameCenterPlugin.swift` — Custom CAPBridgedPlugin wrapping `GKLocalPlayer.authenticateHandler`
 - `public/enemies/*.png` — Blender-rendered chibi sprites (1024×1024, transparent BG)
-- `public/dictionaries/*.txt` — 6 word lists, 3.3M words total (iOS bundle ships only `en.txt`; others fetched on demand from GitHub Pages)
+- `public/dictionaries/*.txt` — 6 word lists, 3.3M words total (native bundle ships only `en`+`pt`; others fetched on demand from the CDN). `public/definitions/<locale>/<bucket>.json` — bucketed defs, 346 MB total, same Option B delivery (en+pt bundled ~58 MB, rest via `VITE_DEFS_CDN_BASE`); gitignored/durable-local
 - `scripts/asc/` — App Store Connect API automation (bundle ID, app metadata, age rating, build attach, encryption, screenshots)
 - `scripts/blender/render_enemies.py` — Procedural Blender script for all 5 enemies
 - `scripts/normalize-dictionaries.mjs` — Raw word lists → clean per-locale text files
-- `scripts/strip-non-en-dicts.mjs` — Post-build hook to keep only `en.txt` in the iOS bundle
+- `scripts/strip-non-bundled-assets.mjs` — Post-build hook (Option B delivery): keeps only the `BUNDLED_LOCALES` starter set (`en`+`pt`) of **both** dictionaries and definitions in the native bundle; the rest are CDN-fetched + cached at runtime. Edit the one `BUNDLED_LOCALES` set to change the offline baseline
 
 ## Key gotchas
 

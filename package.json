@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ios:build": "CAPACITOR=1 npm run build && node scripts/strip-non-en-dicts.mjs && npx cap sync ios",
+    "ios:build": "CAPACITOR=1 npm run build && node scripts/strip-non-bundled-assets.mjs && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "ios:run": "npm run ios:build && npm run ios:open",
     "ios:release": "node --env-file=.env.local scripts/asc/release.mjs",

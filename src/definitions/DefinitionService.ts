@@ -1,7 +1,8 @@
 /**
- * Definition lookup service — reads the bundled, prefix-bucketed definition
- * dataset produced by scripts/data/package-defs.mjs and resolves a played word
- * into a displayable DefEntry.
+ * Definition lookup service — reads the prefix-bucketed definition dataset
+ * produced by scripts/data/package-defs.mjs (the starter locale(s) from the
+ * app bundle, every other language on demand from the CDN) and resolves a
+ * played word into a displayable DefEntry.
  *
  * On-disk layout (public/definitions/<locale>/<bucket>.json):
  *     { "<word>":  {s:[{p,g}], x?, i?, f?, gl?}   // a definition
@@ -72,32 +73,75 @@ export function bucketKey(word: string): string {
 
 // ─── Bucket transport (injectable) ────────────────────────────────────────────
 
-/** Fetch a bucket's raw JSON, or null when it doesn't exist / isn't JSON. */
+/**
+ * Fetch a bucket's raw JSON. Returns null when the bucket is *definitively*
+ * absent (so it can be cached as "known absent"); THROWS on a transient failure
+ * (offline / CDN unreachable) so loadBucket leaves the cache empty and retries.
+ */
 export type BucketFetcher = (locale: string, bucket: string) => Promise<RawBucket | null>;
 
 /**
- * Default transport: fetch the bundled file. Mirrors WordValidator.loadDictionary's
- * content-type guard — Vite serves an HTML 200 for missing static files, so a
- * non-JSON content-type means "no such bucket", not a parse error. Bundled-only
- * (every locale ships in-app), so there's no CDN fallback.
+ * CDN base for locales not shipped in the app bundle. Definitions follow the
+ * exact bundled→remote delivery the dictionaries already use (WordValidator):
+ * the bundled starter locale(s) resolve offline; every other language's buckets
+ * are fetched on demand and cached. The full six-locale dataset is too large to
+ * bundle (346 MB), so only the starter set ships in-app — small installs are a
+ * real acquisition win in metered-data / budget-device markets. Swap the host
+ * (e.g. to a Cloudflare R2 bucket) via VITE_DEFS_CDN_BASE — no code change.
  */
-const fetchBucket: BucketFetcher = async (locale, bucket) => {
+const DEFS_CDN_BASE: string =
+  import.meta.env.VITE_DEFS_CDN_BASE || 'https://samilamti.github.io/word-games';
+
+/** Three-way outcome so a transient failure is never mistaken for an absence. */
+type FetchOutcome =
+  | { kind: 'ok'; bucket: RawBucket }
+  | { kind: 'absent' } // a real "no such bucket" — safe to cache as null
+  | { kind: 'transient' }; // offline / CDN 5xx — must NOT be cached; retry later
+
+/**
+ * Fetch + parse one bucket URL. Mirrors WordValidator.loadDictionary's
+ * content-type guard: Vite serves an HTML 200 for missing static files, so a
+ * non-JSON content-type means "no such bucket", not a parse error.
+ */
+async function fetchJson(url: string): Promise<FetchOutcome> {
   let res: Response;
   try {
-    res = await fetch(`definitions/${locale}/${bucket}.json`);
+    res = await fetch(url);
   } catch {
-    return null; // offline / network error
+    return { kind: 'transient' }; // offline / DNS / connection refused
   }
-  if (!res.ok) return null;
+  if (res.status >= 500 || res.status === 429) return { kind: 'transient' };
+  if (!res.ok) return { kind: 'absent' }; // 404 etc.
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json') && !contentType.includes('text/plain')) {
-    return null; // SPA HTML fallback for a missing file
+    return { kind: 'absent' }; // SPA HTML fallback for a missing file
   }
   try {
-    return (await res.json()) as RawBucket;
+    return { kind: 'ok', bucket: (await res.json()) as RawBucket };
   } catch {
-    return null;
+    return { kind: 'absent' }; // present but unparseable — treat as no def
   }
+}
+
+/**
+ * Default transport: try the bundled file first (offline for the in-app starter
+ * locale), then fall back to the CDN for on-demand languages. Returns the bucket
+ * on success, null when it's definitively absent everywhere, and throws on a
+ * transient failure so the caller retries instead of caching a permanent miss.
+ */
+const fetchBucket: BucketFetcher = async (locale, bucket) => {
+  const path = `definitions/${locale}/${bucket}.json`;
+
+  const bundled = await fetchJson(path);
+  if (bundled.kind === 'ok') return bundled.bucket;
+  // 'absent' or 'transient' on the bundled path → fall through to the CDN.
+
+  const remote = await fetchJson(`${DEFS_CDN_BASE}/${path}`);
+  if (remote.kind === 'ok') return remote.bucket;
+  if (remote.kind === 'transient') {
+    throw new Error(`definitions: ${locale}/${bucket} unreachable`);
+  }
+  return null; // absent in both the bundle and the CDN
 };
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -122,10 +166,11 @@ export class DefinitionService {
     const load = (async () => {
       try {
         const data = await this.fetcher(locale, bucket);
-        this.cache.set(key, data);
+        this.cache.set(key, data); // null here = "definitively absent, don't refetch"
         return data;
       } catch {
-        this.cache.set(key, null);
+        // Transient failure (offline / CDN 5xx): do NOT cache, so the next
+        // lookup of this bucket retries once connectivity returns.
         return null;
       } finally {
         this.inflight.delete(key);
