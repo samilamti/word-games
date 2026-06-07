@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEntitlementStore, type PaywallContext } from '../store/entitlementStore.ts';
 import { billing } from '../billing/billing.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * The one-time-unlock offer (Phase D / M3). Reads paywallOpen/context from
@@ -12,30 +13,28 @@ import { billing } from '../billing/billing.ts';
  * offering once billing is wired (price in SEK to avoid double FX).
  */
 
-const FEATURES = [
-  '⚔️ The full campaign — enemies 3, 4 & 5',
-  '📖 Word journal — save every word you play',
-  '🧠 Spaced-repetition review & quizzes',
-  '🌍 Per-language vocabulary tracking',
-];
-
-const HEADLINE: Record<PaywallContext, string> = {
-  campaign: 'Unlock the full campaign',
-  journal: 'Unlock your word journal',
-};
-
-const PRICE_LABEL = 'One-time purchase'; // TODO: pull from RevenueCat offering
-
 export function Paywall() {
   const open = useEntitlementStore((s) => s.paywallOpen);
   const context = useEntitlementStore((s) => s.paywallContext);
   const setUnlocked = useEntitlementStore((s) => s.setUnlocked);
   const closePaywall = useEntitlementStore((s) => s.closePaywall);
+  const ui = useUI();
 
   const [busy, setBusy] = useState<null | 'buy' | 'restore'>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   if (!open) return null;
+
+  const features = [
+    ui.paywallFeatureCampaign,
+    ui.paywallFeatureJournal,
+    ui.paywallFeatureReview,
+    ui.paywallFeatureVocab,
+  ];
+  const headline: Record<PaywallContext, string> = {
+    campaign: ui.paywallHeadlineCampaign,
+    journal: ui.paywallHeadlineJournal,
+  };
 
   const run = async (kind: 'buy' | 'restore') => {
     setBusy(kind);
@@ -46,10 +45,10 @@ export function Paywall() {
         setUnlocked(true);
         closePaywall();
       } else {
-        setMsg(kind === 'buy' ? 'Purchase was not completed.' : 'No previous purchase found to restore.');
+        setMsg(kind === 'buy' ? ui.paywallErrorBuy : ui.paywallErrorRestore);
       }
     } catch {
-      setMsg('Something went wrong. Please try again.');
+      setMsg(ui.paywallErrorGeneric);
     } finally {
       setBusy(null);
     }
@@ -93,14 +92,14 @@ export function Paywall() {
             WebkitTextFillColor: 'transparent',
           }}
         >
-          {context ? HEADLINE[context] : 'Unlock everything'}
+          {context ? headline[context] : ui.paywallHeadlineDefault}
         </h2>
         <p style={{ margin: '0 0 18px', textAlign: 'center', color: '#aaa', fontSize: 13 }}>
-          One purchase. Yours forever, on this device.
+          {ui.paywallSubtitle}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {FEATURES.map((f) => (
+          {features.map((f) => (
             <div key={f} style={{ color: '#e0e0e0', fontSize: 15, lineHeight: 1.35 }}>
               {f}
             </div>
@@ -127,7 +126,7 @@ export function Paywall() {
             opacity: busy && busy !== 'buy' ? 0.6 : 1,
           }}
         >
-          {busy === 'buy' ? 'Unlocking…' : `Unlock — ${PRICE_LABEL}`}
+          {busy === 'buy' ? ui.paywallBuying : `${ui.paywallBuy} — ${ui.paywallPriceFallback}`}
         </button>
 
         <button
@@ -146,7 +145,7 @@ export function Paywall() {
             cursor: busy ? 'default' : 'pointer',
           }}
         >
-          {busy === 'restore' ? 'Restoring…' : 'Restore purchase'}
+          {busy === 'restore' ? ui.paywallRestoring : ui.paywallRestore}
         </button>
 
         <button
@@ -163,11 +162,11 @@ export function Paywall() {
             cursor: busy ? 'default' : 'pointer',
           }}
         >
-          Maybe later
+          {ui.paywallLater}
         </button>
 
         <p style={{ margin: '14px 0 0', textAlign: 'center', color: '#6f6f8a', fontSize: 12 }}>
-          All 6 languages and live definitions are always free.
+          {ui.paywallFooter}
         </p>
       </div>
     </div>

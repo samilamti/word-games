@@ -4,6 +4,7 @@ import { useDevStore } from '../store/devStore.ts';
 import { useJournalStore } from '../store/journalStore.ts';
 import { definitionService, type DefEntry } from '../definitions/DefinitionService.ts';
 import { requireUnlock } from '../store/entitlementStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Ephemeral "what did I just spell?" definition card — the free "taste" hook of
@@ -36,6 +37,7 @@ export function DefinitionToast() {
   const locale = useGameStore((s) => s.locale);
   const m2Enabled = useDevStore((s) => s.m2Enabled);
   const saveToJournal = useJournalStore((s) => s.save);
+  const ui = useUI();
 
   const [entry, setEntry] = useState<DefEntry | null>(null);
   const [resolvedAt, setResolvedAt] = useState(0);
@@ -99,7 +101,7 @@ export function DefinitionToast() {
         )}
         {entry.glossLang === 'en' && (
           <span
-            title="Definition shown in English"
+            title={ui.defInEnglish}
             style={{
               fontSize: 10,
               fontWeight: 'bold',
@@ -121,7 +123,7 @@ export function DefinitionToast() {
               setSavedTrigger(at);
             }}
             disabled={saved}
-            title={saved ? 'Saved to journal' : 'Save to journal'}
+            title={saved ? ui.savedToJournal : ui.saveToJournal}
             style={{
               pointerEvents: 'auto',
               marginLeft: 'auto',
@@ -138,14 +140,14 @@ export function DefinitionToast() {
               cursor: saved ? 'default' : 'pointer',
             }}
           >
-            {saved ? '★ Saved' : '★ Save'}
+            {saved ? `★ ${ui.saved}` : `★ ${ui.save}`}
           </button>
         )}
       </div>
 
       {entry.formOf && (
         <div style={{ fontSize: 12, color: '#bdbdbd', fontStyle: 'italic', marginTop: 2 }}>
-          {entry.formOf.tags ? `${entry.formOf.tags} of ` : 'form of '}
+          {entry.formOf.tags ? `${entry.formOf.tags} ${ui.defOf} ` : `${ui.defFormOf} `}
           <span style={{ color: ACCENT, fontStyle: 'normal' }}>{entry.formOf.lemma}</span>
         </div>
       )}

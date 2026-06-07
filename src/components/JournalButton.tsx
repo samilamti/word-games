@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDevStore } from '../store/devStore.ts';
 import { JournalModal } from './JournalModal.tsx';
 import { requireUnlock } from '../store/entitlementStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Floating button that opens the word journal. Stacked just above the
@@ -12,6 +13,7 @@ import { requireUnlock } from '../store/entitlementStore.ts';
 export function JournalButton() {
   const m2Enabled = useDevStore((s) => s.m2Enabled);
   const [open, setOpen] = useState(false);
+  const ui = useUI();
 
   if (!m2Enabled) return null;
 
@@ -21,8 +23,8 @@ export function JournalButton() {
         onClick={() => {
           if (requireUnlock('journal')) setOpen(true); // locked → paywall instead
         }}
-        aria-label="Open word journal"
-        title="Word journal"
+        aria-label={ui.journalTitle}
+        title={ui.journalTitle}
         style={{
           position: 'fixed',
           bottom: 'calc(76px + env(safe-area-inset-bottom))',

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { useJournalStore, listByLocale, listDue } from '../store/journalStore.ts';
 import { ReviewModal } from './ReviewModal.tsx';
+import { useUI } from '../i18n/useUI.ts';
 
 interface Props {
   onClose: () => void;
@@ -23,6 +24,7 @@ export function JournalModal({ onClose }: Props) {
   const entries = useJournalStore((s) => s.entries);
   const removeWord = useJournalStore((s) => s.remove);
   const clearJournal = useJournalStore((s) => s.clear);
+  const ui = useUI();
 
   const [search, setSearch] = useState('');
   const [reviewing, setReviewing] = useState(false);
@@ -42,7 +44,7 @@ export function JournalModal({ onClose }: Props) {
   }, [entries]);
 
   const handleClear = () => {
-    if (confirm('Clear the entire word journal on this device? This cannot be undone.')) {
+    if (confirm(ui.journalClearConfirm)) {
       clearJournal();
     }
   };
@@ -75,16 +77,16 @@ export function JournalModal({ onClose }: Props) {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 22 }}>📖 Word Journal</h3>
-          <button onClick={onClose} style={closeBtn}>Close</button>
+          <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 22 }}>📖 {ui.journalTitle}</h3>
+          <button onClick={onClose} style={closeBtn}>{ui.close}</button>
         </div>
 
         {/* Summary + review entry point */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
           <div style={{ color: '#aaa', fontSize: 13 }}>
             <strong style={{ color: '#e0e0e0' }}>{locale.toUpperCase()}</strong>: {all.length}{' '}
-            {all.length === 1 ? 'word' : 'words'}
-            {dueCount > 0 && <span style={{ color: '#ff9800' }}> · {dueCount} due</span>}
+            {all.length === 1 ? ui.journalWord : ui.journalWords}
+            {dueCount > 0 && <span style={{ color: '#ff9800' }}> · {dueCount} {ui.journalDue}</span>}
           </div>
           <button
             onClick={() => setReviewing(true)}
@@ -100,7 +102,7 @@ export function JournalModal({ onClose }: Props) {
               cursor: dueCount > 0 ? 'pointer' : 'default',
             }}
           >
-            🧠 Review{dueCount > 0 ? ` (${dueCount})` : ''}
+            🧠 {ui.review}{dueCount > 0 ? ` (${dueCount})` : ''}
           </button>
         </div>
 
@@ -108,7 +110,7 @@ export function JournalModal({ onClose }: Props) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search saved words…"
+            placeholder={ui.journalSearch}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -125,7 +127,7 @@ export function JournalModal({ onClose }: Props) {
         {/* List */}
         {all.length === 0 ? (
           <div style={{ padding: '32px 12px', textAlign: 'center', color: '#888', fontStyle: 'italic' }}>
-            No saved words yet. Tap “★ Save” on a definition to start your journal.
+            {ui.journalEmpty}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -158,8 +160,8 @@ export function JournalModal({ onClose }: Props) {
                 </div>
                 <button
                   onClick={() => removeWord(e.word, locale)}
-                  aria-label={`Remove ${e.word}`}
-                  title="Remove"
+                  aria-label={`${ui.remove} ${e.word}`}
+                  title={ui.remove}
                   style={{
                     minHeight: 0, minWidth: 0,
                     padding: '2px 8px',
@@ -176,7 +178,7 @@ export function JournalModal({ onClose }: Props) {
             ))}
             {list.length === 0 && (
               <div style={{ padding: '16px', textAlign: 'center', color: '#888', fontStyle: 'italic' }}>
-                No matches.
+                {ui.journalNoMatches}
               </div>
             )}
           </div>
@@ -189,7 +191,7 @@ export function JournalModal({ onClose }: Props) {
               {tally.map(([loc, n]) => `${loc.toUpperCase()} ${n}`).join(' · ')}
             </div>
             <button onClick={handleClear} style={{ ...closeBtn, color: '#888', backgroundColor: 'transparent' }}>
-              Clear All
+              {ui.journalClearAll}
             </button>
           </div>
         )}

@@ -1,16 +1,11 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { useJournalStore, listDue, type Grade, type JournalEntry } from '../store/journalStore.ts';
+import { useUI } from '../i18n/useUI.ts';
 
 interface Props {
   onClose: () => void;
 }
-
-const GRADES: { grade: Grade; label: string; color: string }[] = [
-  { grade: 'again', label: 'Again', color: '#ef5350' },
-  { grade: 'good', label: 'Good', color: '#4caf50' },
-  { grade: 'easy', label: 'Easy', color: '#42a5f5' },
-];
 
 function headword(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
@@ -26,12 +21,19 @@ function headword(word: string): string {
 export function ReviewModal({ onClose }: Props) {
   const locale = useGameStore((s) => s.locale);
   const gradeWord = useJournalStore((s) => s.grade);
+  const ui = useUI();
 
   const [queue] = useState<JournalEntry[]>(() =>
     listDue(useJournalStore.getState().entries, locale, Date.now()),
   );
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+
+  const grades: { grade: Grade; label: string; color: string }[] = [
+    { grade: 'again', label: ui.reviewAgain, color: '#ef5350' },
+    { grade: 'good', label: ui.reviewGood, color: '#4caf50' },
+    { grade: 'easy', label: ui.reviewEasy, color: '#42a5f5' },
+  ];
 
   const current = queue[index];
   const done = index >= queue.length;
@@ -46,8 +48,8 @@ export function ReviewModal({ onClose }: Props) {
   return (
     <Shell onClose={onClose}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 20 }}>🧠 Review</h3>
-        <button onClick={onClose} style={closeBtn}>Close</button>
+        <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 20 }}>🧠 {ui.review}</h3>
+        <button onClick={onClose} style={closeBtn}>{ui.close}</button>
       </div>
 
       {queue.length === 0 || done ? (
@@ -55,10 +57,12 @@ export function ReviewModal({ onClose }: Props) {
           <div style={{ fontSize: 40, marginBottom: 8 }}>{queue.length === 0 ? '✅' : '🎉'}</div>
           <div style={{ color: '#e0e0e0', fontSize: 16 }}>
             {queue.length === 0
-              ? 'No words are due for review right now.'
-              : `Reviewed ${queue.length} ${queue.length === 1 ? 'word' : 'words'}!`}
+              ? ui.reviewNoneDue
+              : queue.length === 1
+                ? ui.reviewDoneOne
+                : ui.reviewDoneMany.replace('{n}', String(queue.length))}
           </div>
-          <button onClick={onClose} style={{ ...primaryBtn, marginTop: 20 }}>Done</button>
+          <button onClick={onClose} style={{ ...primaryBtn, marginTop: 20 }}>{ui.done}</button>
         </div>
       ) : (
         <>
@@ -99,14 +103,14 @@ export function ReviewModal({ onClose }: Props) {
               </div>
             ) : (
               <div style={{ textAlign: 'center', marginTop: 24 }}>
-                <button onClick={() => setRevealed(true)} style={primaryBtn}>Show answer</button>
+                <button onClick={() => setRevealed(true)} style={primaryBtn}>{ui.reviewShowAnswer}</button>
               </div>
             )}
           </div>
 
           {revealed && (
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              {GRADES.map((g) => (
+              {grades.map((g) => (
                 <button
                   key={g.grade}
                   onClick={() => handleGrade(g.grade)}

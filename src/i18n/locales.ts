@@ -58,6 +58,56 @@ export interface UIStrings {
   reduceMotion: string;
   soundEffects: string;
   haptics: string;
+  // Generic
+  close: string;
+  done: string;
+  remove: string;
+  review: string;
+  // Definitions (toast)
+  defInEnglish: string;
+  defOf: string; // connector in "{tags} of <lemma>"
+  defFormOf: string;
+  save: string;
+  saved: string;
+  saveToJournal: string;
+  savedToJournal: string;
+  // Journal
+  journalTitle: string;
+  journalWord: string;
+  journalWords: string;
+  journalDue: string;
+  journalSearch: string;
+  journalEmpty: string;
+  journalNoMatches: string;
+  journalClearAll: string;
+  journalClearConfirm: string;
+  // Review
+  reviewShowAnswer: string;
+  reviewAgain: string;
+  reviewGood: string;
+  reviewEasy: string;
+  reviewNoneDue: string;
+  reviewDoneOne: string;
+  reviewDoneMany: string; // {n}
+  // Paywall
+  paywallHeadlineCampaign: string;
+  paywallHeadlineJournal: string;
+  paywallHeadlineDefault: string;
+  paywallSubtitle: string;
+  paywallFeatureCampaign: string;
+  paywallFeatureJournal: string;
+  paywallFeatureReview: string;
+  paywallFeatureVocab: string;
+  paywallPriceFallback: string;
+  paywallBuy: string;
+  paywallBuying: string;
+  paywallRestore: string;
+  paywallRestoring: string;
+  paywallLater: string;
+  paywallFooter: string;
+  paywallErrorBuy: string;
+  paywallErrorRestore: string;
+  paywallErrorGeneric: string;
 }
 
 export interface LocaleDef {
@@ -144,6 +194,51 @@ const EN: LocaleDef = {
     reduceMotion: 'Reduce motion',
     soundEffects: 'Sound effects',
     haptics: 'Vibration',
+    close: 'Close',
+    done: 'Done',
+    remove: 'Remove',
+    review: 'Review',
+    defInEnglish: 'Definition shown in English',
+    defOf: 'of',
+    defFormOf: 'form of',
+    save: 'Save',
+    saved: 'Saved',
+    saveToJournal: 'Save to journal',
+    savedToJournal: 'Saved to journal',
+    journalTitle: 'Word Journal',
+    journalWord: 'word',
+    journalWords: 'words',
+    journalDue: 'due',
+    journalSearch: 'Search saved words…',
+    journalEmpty: 'No saved words yet. Tap “★ Save” on a definition to start your journal.',
+    journalNoMatches: 'No matches.',
+    journalClearAll: 'Clear All',
+    journalClearConfirm: 'Clear the entire word journal on this device? This cannot be undone.',
+    reviewShowAnswer: 'Show answer',
+    reviewAgain: 'Again',
+    reviewGood: 'Good',
+    reviewEasy: 'Easy',
+    reviewNoneDue: 'No words are due for review right now.',
+    reviewDoneOne: 'Reviewed 1 word!',
+    reviewDoneMany: 'Reviewed {n} words!',
+    paywallHeadlineCampaign: 'Unlock the full campaign',
+    paywallHeadlineJournal: 'Unlock your word journal',
+    paywallHeadlineDefault: 'Unlock everything',
+    paywallSubtitle: 'One purchase. Yours forever, on this device.',
+    paywallFeatureCampaign: '⚔️ The full campaign — enemies 3, 4 & 5',
+    paywallFeatureJournal: '📖 Word journal — save every word you play',
+    paywallFeatureReview: '🧠 Spaced-repetition review & quizzes',
+    paywallFeatureVocab: '🌍 Per-language vocabulary tracking',
+    paywallPriceFallback: 'One-time purchase',
+    paywallBuy: 'Unlock',
+    paywallBuying: 'Unlocking…',
+    paywallRestore: 'Restore purchase',
+    paywallRestoring: 'Restoring…',
+    paywallLater: 'Maybe later',
+    paywallFooter: 'All 6 languages and live definitions are always free.',
+    paywallErrorBuy: 'Purchase was not completed.',
+    paywallErrorRestore: 'No previous purchase found to restore.',
+    paywallErrorGeneric: 'Something went wrong. Please try again.',
   },
 };
 
@@ -222,6 +317,51 @@ const ES: LocaleDef = {
     reduceMotion: 'Reducir movimiento',
     soundEffects: 'Efectos de sonido',
     haptics: 'Vibración',
+    close: 'Cerrar',
+    done: 'Listo',
+    remove: 'Eliminar',
+    review: 'Repasar',
+    defInEnglish: 'Definición en inglés',
+    defOf: 'de',
+    defFormOf: 'forma de',
+    save: 'Guardar',
+    saved: 'Guardado',
+    saveToJournal: 'Guardar en el diario',
+    savedToJournal: 'Guardado en el diario',
+    journalTitle: 'Diario de palabras',
+    journalWord: 'palabra',
+    journalWords: 'palabras',
+    journalDue: 'pendientes',
+    journalSearch: 'Buscar palabras guardadas…',
+    journalEmpty: 'Aún no hay palabras guardadas. Toca “★ Guardar” en una definición para empezar tu diario.',
+    journalNoMatches: 'Sin resultados.',
+    journalClearAll: 'Borrar todo',
+    journalClearConfirm: '¿Borrar todo el diario de palabras de este dispositivo? Esto no se puede deshacer.',
+    reviewShowAnswer: 'Mostrar respuesta',
+    reviewAgain: 'Otra vez',
+    reviewGood: 'Bien',
+    reviewEasy: 'Fácil',
+    reviewNoneDue: 'No hay palabras para repasar ahora mismo.',
+    reviewDoneOne: '¡1 palabra repasada!',
+    reviewDoneMany: '¡{n} palabras repasadas!',
+    paywallHeadlineCampaign: 'Desbloquea la campaña completa',
+    paywallHeadlineJournal: 'Desbloquea tu diario de palabras',
+    paywallHeadlineDefault: 'Desbloquéalo todo',
+    paywallSubtitle: 'Una compra. Tuyo para siempre, en este dispositivo.',
+    paywallFeatureCampaign: '⚔️ La campaña completa: enemigos 3, 4 y 5',
+    paywallFeatureJournal: '📖 Diario de palabras: guarda cada palabra que juegas',
+    paywallFeatureReview: '🧠 Repaso espaciado y cuestionarios',
+    paywallFeatureVocab: '🌍 Seguimiento de vocabulario por idioma',
+    paywallPriceFallback: 'Compra única',
+    paywallBuy: 'Desbloquear',
+    paywallBuying: 'Desbloqueando…',
+    paywallRestore: 'Restaurar compra',
+    paywallRestoring: 'Restaurando…',
+    paywallLater: 'Quizás más tarde',
+    paywallFooter: 'Los 6 idiomas y las definiciones en directo son siempre gratis.',
+    paywallErrorBuy: 'La compra no se completó.',
+    paywallErrorRestore: 'No se encontró ninguna compra previa para restaurar.',
+    paywallErrorGeneric: 'Algo salió mal. Inténtalo de nuevo.',
   },
 };
 
@@ -298,6 +438,51 @@ const FR: LocaleDef = {
     reduceMotion: 'Réduire les animations',
     soundEffects: 'Effets sonores',
     haptics: 'Vibrations',
+    close: 'Fermer',
+    done: 'Terminé',
+    remove: 'Supprimer',
+    review: 'Réviser',
+    defInEnglish: 'Définition en anglais',
+    defOf: 'de',
+    defFormOf: 'forme de',
+    save: 'Enregistrer',
+    saved: 'Enregistré',
+    saveToJournal: 'Enregistrer au journal',
+    savedToJournal: 'Enregistré au journal',
+    journalTitle: 'Journal de mots',
+    journalWord: 'mot',
+    journalWords: 'mots',
+    journalDue: 'à réviser',
+    journalSearch: 'Rechercher des mots…',
+    journalEmpty: 'Aucun mot enregistré. Touche « ★ Enregistrer » sur une définition pour commencer ton journal.',
+    journalNoMatches: 'Aucun résultat.',
+    journalClearAll: 'Tout effacer',
+    journalClearConfirm: 'Effacer tout le journal de mots sur cet appareil ? Cette action est irréversible.',
+    reviewShowAnswer: 'Voir la réponse',
+    reviewAgain: 'Encore',
+    reviewGood: 'Bien',
+    reviewEasy: 'Facile',
+    reviewNoneDue: 'Aucun mot à réviser pour le moment.',
+    reviewDoneOne: '1 mot révisé !',
+    reviewDoneMany: '{n} mots révisés !',
+    paywallHeadlineCampaign: 'Débloque la campagne complète',
+    paywallHeadlineJournal: 'Débloque ton journal de mots',
+    paywallHeadlineDefault: 'Tout débloquer',
+    paywallSubtitle: 'Un seul achat. À toi pour toujours, sur cet appareil.',
+    paywallFeatureCampaign: '⚔️ La campagne complète — ennemis 3, 4 et 5',
+    paywallFeatureJournal: '📖 Journal de mots — enregistre chaque mot joué',
+    paywallFeatureReview: '🧠 Révision espacée et quiz',
+    paywallFeatureVocab: '🌍 Suivi du vocabulaire par langue',
+    paywallPriceFallback: 'Achat unique',
+    paywallBuy: 'Débloquer',
+    paywallBuying: 'Déblocage…',
+    paywallRestore: 'Restaurer l\'achat',
+    paywallRestoring: 'Restauration…',
+    paywallLater: 'Plus tard',
+    paywallFooter: 'Les 6 langues et les définitions en direct sont toujours gratuites.',
+    paywallErrorBuy: 'L\'achat n\'a pas été finalisé.',
+    paywallErrorRestore: 'Aucun achat précédent à restaurer.',
+    paywallErrorGeneric: 'Une erreur s\'est produite. Réessaie.',
   },
 };
 
@@ -377,6 +562,51 @@ const DE: LocaleDef = {
     reduceMotion: 'Bewegung reduzieren',
     soundEffects: 'Soundeffekte',
     haptics: 'Vibration',
+    close: 'Schließen',
+    done: 'Fertig',
+    remove: 'Entfernen',
+    review: 'Wiederholen',
+    defInEnglish: 'Definition auf Englisch',
+    defOf: 'von',
+    defFormOf: 'Form von',
+    save: 'Speichern',
+    saved: 'Gespeichert',
+    saveToJournal: 'Im Journal speichern',
+    savedToJournal: 'Im Journal gespeichert',
+    journalTitle: 'Wort-Journal',
+    journalWord: 'Wort',
+    journalWords: 'Wörter',
+    journalDue: 'fällig',
+    journalSearch: 'Gespeicherte Wörter suchen…',
+    journalEmpty: 'Noch keine Wörter gespeichert. Tippe bei einer Definition auf „★ Speichern“, um dein Journal zu starten.',
+    journalNoMatches: 'Keine Treffer.',
+    journalClearAll: 'Alle löschen',
+    journalClearConfirm: 'Das gesamte Wort-Journal auf diesem Gerät löschen? Dies kann nicht rückgängig gemacht werden.',
+    reviewShowAnswer: 'Antwort zeigen',
+    reviewAgain: 'Nochmal',
+    reviewGood: 'Gut',
+    reviewEasy: 'Leicht',
+    reviewNoneDue: 'Momentan sind keine Wörter zur Wiederholung fällig.',
+    reviewDoneOne: '1 Wort wiederholt!',
+    reviewDoneMany: '{n} Wörter wiederholt!',
+    paywallHeadlineCampaign: 'Schalte die ganze Kampagne frei',
+    paywallHeadlineJournal: 'Schalte dein Wort-Journal frei',
+    paywallHeadlineDefault: 'Alles freischalten',
+    paywallSubtitle: 'Ein Kauf. Für immer deins, auf diesem Gerät.',
+    paywallFeatureCampaign: '⚔️ Die ganze Kampagne – Gegner 3, 4 & 5',
+    paywallFeatureJournal: '📖 Wort-Journal – speichere jedes gespielte Wort',
+    paywallFeatureReview: '🧠 Wiederholung mit Abständen & Quizze',
+    paywallFeatureVocab: '🌍 Wortschatz-Verfolgung pro Sprache',
+    paywallPriceFallback: 'Einmaliger Kauf',
+    paywallBuy: 'Freischalten',
+    paywallBuying: 'Wird freigeschaltet…',
+    paywallRestore: 'Kauf wiederherstellen',
+    paywallRestoring: 'Wird wiederhergestellt…',
+    paywallLater: 'Vielleicht später',
+    paywallFooter: 'Alle 6 Sprachen und Live-Definitionen sind immer kostenlos.',
+    paywallErrorBuy: 'Der Kauf wurde nicht abgeschlossen.',
+    paywallErrorRestore: 'Kein früherer Kauf zum Wiederherstellen gefunden.',
+    paywallErrorGeneric: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
   },
 };
 
@@ -451,6 +681,51 @@ const PT: LocaleDef = {
     reduceMotion: 'Reduzir movimento',
     soundEffects: 'Efeitos sonoros',
     haptics: 'Vibração',
+    close: 'Fechar',
+    done: 'Concluído',
+    remove: 'Remover',
+    review: 'Rever',
+    defInEnglish: 'Definição em inglês',
+    defOf: 'de',
+    defFormOf: 'forma de',
+    save: 'Guardar',
+    saved: 'Guardado',
+    saveToJournal: 'Guardar no diário',
+    savedToJournal: 'Guardado no diário',
+    journalTitle: 'Diário de palavras',
+    journalWord: 'palavra',
+    journalWords: 'palavras',
+    journalDue: 'pendentes',
+    journalSearch: 'Procurar palavras guardadas…',
+    journalEmpty: 'Ainda não há palavras guardadas. Toca em “★ Guardar” numa definição para começar o teu diário.',
+    journalNoMatches: 'Sem resultados.',
+    journalClearAll: 'Limpar tudo',
+    journalClearConfirm: 'Limpar todo o diário de palavras neste dispositivo? Isto não pode ser anulado.',
+    reviewShowAnswer: 'Mostrar resposta',
+    reviewAgain: 'De novo',
+    reviewGood: 'Bem',
+    reviewEasy: 'Fácil',
+    reviewNoneDue: 'Não há palavras para rever neste momento.',
+    reviewDoneOne: '1 palavra revista!',
+    reviewDoneMany: '{n} palavras revistas!',
+    paywallHeadlineCampaign: 'Desbloqueia a campanha completa',
+    paywallHeadlineJournal: 'Desbloqueia o teu diário de palavras',
+    paywallHeadlineDefault: 'Desbloqueia tudo',
+    paywallSubtitle: 'Uma compra. Teu para sempre, neste dispositivo.',
+    paywallFeatureCampaign: '⚔️ A campanha completa — inimigos 3, 4 e 5',
+    paywallFeatureJournal: '📖 Diário de palavras — guarda cada palavra que jogas',
+    paywallFeatureReview: '🧠 Revisão espaçada e questionários',
+    paywallFeatureVocab: '🌍 Acompanhamento de vocabulário por idioma',
+    paywallPriceFallback: 'Compra única',
+    paywallBuy: 'Desbloquear',
+    paywallBuying: 'A desbloquear…',
+    paywallRestore: 'Restaurar compra',
+    paywallRestoring: 'A restaurar…',
+    paywallLater: 'Talvez mais tarde',
+    paywallFooter: 'Os 6 idiomas e as definições ao vivo são sempre gratuitos.',
+    paywallErrorBuy: 'A compra não foi concluída.',
+    paywallErrorRestore: 'Não foi encontrada nenhuma compra anterior para restaurar.',
+    paywallErrorGeneric: 'Algo correu mal. Tenta novamente.',
   },
 };
 
@@ -522,6 +797,51 @@ const IT: LocaleDef = {
     reduceMotion: 'Riduci animazioni',
     soundEffects: 'Effetti sonori',
     haptics: 'Vibrazione',
+    close: 'Chiudi',
+    done: 'Fatto',
+    remove: 'Rimuovi',
+    review: 'Ripassa',
+    defInEnglish: 'Definizione in inglese',
+    defOf: 'di',
+    defFormOf: 'forma di',
+    save: 'Salva',
+    saved: 'Salvato',
+    saveToJournal: 'Salva nel diario',
+    savedToJournal: 'Salvato nel diario',
+    journalTitle: 'Diario delle parole',
+    journalWord: 'parola',
+    journalWords: 'parole',
+    journalDue: 'da rivedere',
+    journalSearch: 'Cerca parole salvate…',
+    journalEmpty: 'Nessuna parola salvata. Tocca “★ Salva” su una definizione per iniziare il tuo diario.',
+    journalNoMatches: 'Nessun risultato.',
+    journalClearAll: 'Cancella tutto',
+    journalClearConfirm: 'Cancellare l\'intero diario delle parole su questo dispositivo? L\'azione è irreversibile.',
+    reviewShowAnswer: 'Mostra risposta',
+    reviewAgain: 'Ancora',
+    reviewGood: 'Bene',
+    reviewEasy: 'Facile',
+    reviewNoneDue: 'Nessuna parola da ripassare al momento.',
+    reviewDoneOne: '1 parola ripassata!',
+    reviewDoneMany: '{n} parole ripassate!',
+    paywallHeadlineCampaign: 'Sblocca la campagna completa',
+    paywallHeadlineJournal: 'Sblocca il tuo diario delle parole',
+    paywallHeadlineDefault: 'Sblocca tutto',
+    paywallSubtitle: 'Un solo acquisto. Tuo per sempre, su questo dispositivo.',
+    paywallFeatureCampaign: '⚔️ La campagna completa — nemici 3, 4 e 5',
+    paywallFeatureJournal: '📖 Diario delle parole — salva ogni parola giocata',
+    paywallFeatureReview: '🧠 Ripasso a intervalli e quiz',
+    paywallFeatureVocab: '🌍 Monitoraggio del vocabolario per lingua',
+    paywallPriceFallback: 'Acquisto unico',
+    paywallBuy: 'Sblocca',
+    paywallBuying: 'Sblocco…',
+    paywallRestore: 'Ripristina acquisto',
+    paywallRestoring: 'Ripristino…',
+    paywallLater: 'Forse più tardi',
+    paywallFooter: 'Tutte e 6 le lingue e le definizioni dal vivo sono sempre gratuite.',
+    paywallErrorBuy: 'L\'acquisto non è stato completato.',
+    paywallErrorRestore: 'Nessun acquisto precedente da ripristinare.',
+    paywallErrorGeneric: 'Qualcosa è andato storto. Riprova.',
   },
 };
 

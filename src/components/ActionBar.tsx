@@ -80,7 +80,7 @@ export function ActionBar() {
                 transition: 'background-color 0.2s',
               }}
             >
-              Submit Word
+              {ui.submitWord}
             </button>
 
             <button
@@ -97,7 +97,7 @@ export function ActionBar() {
                 transition: 'background-color 0.2s',
               }}
             >
-              Recall
+              {ui.recall}
             </button>
 
             <button
