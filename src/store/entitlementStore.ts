@@ -69,4 +69,9 @@ if (typeof window !== 'undefined') {
       useEntitlementStore.getState().setUnlocked(v);
     },
   };
+  // QA helper: raise the paywall on demand (review screenshots, localized-copy checks).
+  (window as unknown as Record<string, unknown>).__lexicaPaywall = {
+    open: (context: PaywallContext = 'campaign') => useEntitlementStore.getState().openPaywall(context),
+    close: () => useEntitlementStore.getState().closePaywall(),
+  };
 }

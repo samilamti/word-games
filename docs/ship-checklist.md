@@ -16,7 +16,11 @@ plan docs referenced at the bottom; this is the prioritized action list._
 _(The earlier in-flight i18n pass landed as `7a64229`; `tsc -b` is green and 27 tests pass, so that risk is cleared.)_
 
 ## iOS → first sandbox purchase
-3. **IAP review screenshot** → clears `MISSING_METADATA` (Apple won't return the product to StoreKit, even in sandbox, until "Ready to Submit"). Can be uploaded via the ASC asset API, or dragged in.
+2. ✅ **In-App Purchase Key — DONE 2026-06-08** (key `PY54MW53LV`). Generated in ASC (Users and Access → Integrations → In-App Purchase), `.p8` uploaded to RevenueCat → Apps → Lexica Knights; RC API confirms `app_store.subscription_key_configured: true` (RC labels the IAP key "subscription_key"). Mandatory for StoreKit 2 — without it RC silently drops transactions and the unlock never flips. Was distinct from the ASC *API* key (product import); both halves were web-UI-only.
+3. ✅ **IAP `full_unlock` → READY_TO_SUBMIT — DONE 2026-06-08** (all via API). Two gaps were blocking, not one:
+   - **Review screenshot** — captured from the live paywall (`scripts/capture-screenshot.mjs`: Chrome-CDP over WS, zero-dep, runs the new `__lexicaPaywall.open()` hook) → uploaded (`scripts/asc/upload-iap-screenshot.mjs`). **Must be an exact device size: 1242×2208 works; 828×1792 → `IMAGE_INCORRECT_DIMENSIONS` (FAILED asset).**
+   - **Availability** — modern ASC requires it *separately from price*; `set-iap-price.mjs` set the SEK price but no territories, so it stuck at MISSING_METADATA. Created across all 175 territories (`scripts/asc/set-iap-availability.mjs`). Gotcha: that resource's product relationship is `inAppPurchase`, **not** `inAppPurchaseV2` (which the screenshot resource uses).
+   - Verify anytime with `scripts/asc/inspect-iap.mjs` (state + localization + price + screenshot + availability).
 4. `npm run ios:release` (build inlines `VITE_RC_IOS_KEY`) → TestFlight.
 5. **Sandbox purchase test** on-device (sandbox Apple ID): buy → unlock → restore; confirm campaign 3–5 + journal/review gate flip.
 
