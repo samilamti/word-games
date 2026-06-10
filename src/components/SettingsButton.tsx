@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSettingsStore } from '../store/settingsStore.ts';
+import { useDevStore } from '../store/devStore.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 interface ToggleRowProps {
@@ -73,6 +74,26 @@ function SettingsModal({ onClose }: ModalProps) {
   const setReduceMotion = useSettingsStore(s => s.setReduceMotion);
   const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
   const setHapticsEnabled = useSettingsStore(s => s.setHapticsEnabled);
+  const m2Enabled = useDevStore(s => s.m2Enabled);
+  const setM2Enabled = useDevStore(s => s.setM2Enabled);
+
+  // Hidden QA trigger: 7 quick taps on the title toggle the M2/M3 preview
+  // (journal/review + paywall) on devices with no JS console — TestFlight
+  // sandbox-purchase testing needs a reachable paywall. The __lexicaDev console
+  // helper remains the dev-machine path. English-only on purpose: it's a QA
+  // affordance, not shipped UI (M2/M3 un-gating removes it).
+  const tapCount = useRef(0);
+  const lastTapAt = useRef(0);
+  const onTitleTap = () => {
+    const now = performance.now();
+    if (now - lastTapAt.current > 1500) tapCount.current = 0;
+    lastTapAt.current = now;
+    tapCount.current += 1;
+    if (tapCount.current >= 7) {
+      tapCount.current = 0;
+      setM2Enabled(!m2Enabled);
+    }
+  };
 
   return (
     <div
@@ -102,7 +123,10 @@ function SettingsModal({ onClose }: ModalProps) {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, color: '#ffd54f', fontSize: 20 }}>
+          <h3
+            onClick={onTitleTap}
+            style={{ margin: 0, color: '#ffd54f', fontSize: 20, userSelect: 'none' }}
+          >
             ⚙️ {ui.settings}
           </h3>
           <button
@@ -126,6 +150,12 @@ function SettingsModal({ onClose }: ModalProps) {
           <ToggleRow label={ui.haptics} on={hapticsEnabled} onChange={setHapticsEnabled} />
           <ToggleRow label={ui.reduceMotion} on={reduceMotion} onChange={setReduceMotion} />
         </div>
+
+        {m2Enabled && (
+          <div style={{ marginTop: 12, fontSize: 12, color: '#8888aa', textAlign: 'center' }}>
+            🧪 preview features on — tap the title ×7 to turn off
+          </div>
+        )}
       </div>
     </div>
   );
