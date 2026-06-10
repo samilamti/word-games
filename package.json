@@ -24,7 +24,8 @@
     "data:build": "node scripts/data/build-definitions.mjs",
     "data:package": "node scripts/data/package-defs.mjs && node scripts/data/gen-attribution.mjs",
     "data:report": "node scripts/data/report-coverage.mjs",
-    "data:all": "npm run data:fetch && npm run data:build && npm run data:package && npm run data:report"
+    "data:all": "npm run data:fetch && npm run data:build && npm run data:package && npm run data:report",
+    "data:publish": "node --env-file=.env.local scripts/publish-definitions.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

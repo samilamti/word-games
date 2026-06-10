@@ -10,6 +10,25 @@ learning-system feature work, not after.
 
 ---
 
+## Progress (2026-06-10)
+
+- **Phase 0 DONE** — SDK was already complete (platforms 34–36.1, build-tools→37, arm64 API-37
+  Play-Store system image, licenses accepted, AVDs `Medium_Phone`/`Small_Phone`). Wrote
+  `android/local.properties` (`sdk.dir`, gitignored). **`~/.zshrc` still wants the two export
+  lines** (Phase 0 below) for interactive shells — scripts here pass env inline instead.
+- **⚠️ JDK: Capacitor 8 Android needs JDK 21, NOT 17** — `capacitor-android` compiles at source
+  release 21; JDK 17 fails with `invalid source release: 21` (the "keep JDK on 17" advice below
+  predates the first real Gradle run and is WRONG). No install needed: Android Studio's bundled
+  JBR is 21 → `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` for CLI
+  builds; Studio GUI builds use it automatically.
+- **Phase 5 (emulator half) DONE — first Android boot ever, clean** (2026-06-10, headless
+  `Medium_Phone` AVD, swiftshader): `assembleDebug` → 30 MB debug APK; app launches; board +
+  tile rack + **PixiJS combat overlay all render**; **tile drag works** (adb swipe → pointer
+  events, no iOS-style workaround needed); GameCenter warns + degrades gracefully as designed;
+  no fatals in logcat (WebGL "no texture bound" spam = software-GPU noise, ignore). **Still
+  physical-device half:** memory headroom on the big `de` dictionary + real-GPU rendering +
+  haptics feel.
+
 ## Progress (2026-06-07)
 
 - **Phase 1 DONE** — `@capacitor/android` installed (resolved 8.4.0; `@capacitor/core` bumped to 8.4.0, cli/ios still 8.3.1 — all within `^8.3.1`, `cap doctor` clean). `android/` scaffold generated + Gradle-synced, all 4 cross-platform plugins detected. `android/` committed; Capacitor's template `.gitignore` excludes build output + `local.properties` (machine SDK path).

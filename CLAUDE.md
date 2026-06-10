@@ -20,6 +20,8 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `npm run ios:release` — full TestFlight pipeline (build→archive→export→altool); **dry-run by default**, add `-- --confirm` to ship, `-- --status` to query build states. Auto-picks the next build number from ASC. See `scripts/asc/release.mjs`.
 - `npm run ios:open` — open Xcode workspace
 - `npm run ios:assets` — rasterize SVG → PNG + `npx capacitor-assets generate --ios`
+- `npm run android:build` — web build + strip + `cap sync android`; then Gradle: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug`
+- `npm run data:publish` — publish `public/definitions/` to the R2 CDN bucket (dry-run by default, `-- --confirm` to upload; needs the four `R2_*`/`CLOUDFLARE_API_TOKEN` vars in `.env.local` — see `scripts/publish-definitions.mjs` header)
 - `npx tsc -b` — TypeScript check only
 
 ## Key directories
@@ -52,6 +54,8 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - **Window debug exposure** uses double cast: `(window as unknown as Record<string, unknown>).__store = useGameStore`.
 - **The `Defaults.properties` altool transient error** sometimes fires on the FIRST upload after a chained build. Just retry the `xcrun altool --upload-app` command; second run typically succeeds.
 - **CocoaPods 1.16 + Ruby 4.0 crashes** without `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. We use SPM so this only matters if someone re-introduces CocoaPods.
+- **Android Gradle builds need JDK 21** — Capacitor 8's `capacitor-android` compiles at source release 21; JDK 17 fails with `invalid source release: 21`. No install needed: Android Studio's bundled JBR is 21 (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`). SDK path comes from gitignored `android/local.properties`.
+- **M2/M3 preview on a device without a console**: tap the Settings-modal title 7 times to toggle `devStore.m2Enabled` (TestFlight sandbox-purchase QA; remove when M2/M3 un-gate for App Store submission).
 
 ## App Store Connect notes
 
