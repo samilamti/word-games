@@ -21,6 +21,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `npm run ios:open` — open Xcode workspace
 - `npm run ios:assets` — rasterize SVG → PNG + `npx capacitor-assets generate --ios`
 - `npm run android:build` — web build + strip + `cap sync android`; then Gradle: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug`
+- `scripts/android-smoke.sh [--avd NAME] [--skip-build] [--keep-running]` — full Android smoke: build → boot AVD headless → install → launch → screenshot (`/tmp/lexica-android-smoke.png`) → logcat fatal scan
 - `npm run data:publish` — publish `public/definitions/` to the R2 CDN bucket (dry-run by default, `-- --confirm` to upload; needs the four `R2_*`/`CLOUDFLARE_API_TOKEN` vars in `.env.local` — see `scripts/publish-definitions.mjs` header)
 - `npx tsc -b` — TypeScript check only
 
