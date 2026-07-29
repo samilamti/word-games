@@ -8,6 +8,18 @@
 //   node --env-file=.env.local scripts/asc/release.mjs --status         # just query build states
 //   node --env-file=.env.local scripts/asc/release.mjs --confirm --whats-new "…"
 //
+// Staged mode — the full chain can outrun a 600s foreground timeout, and the
+// worst place to be killed is mid-upload (the .ipa is shipped but the release
+// note never lands). Each stage is independently re-runnable:
+//
+//   … --confirm --no-upload      # 1. build + archive + export, stop before altool
+//   … --confirm --upload-only    # 2. altool upload of the exported .ipa
+//   … --confirm --finalize       # 3. poll ASC + set the What-to-Test note
+//
+// Stages 2 and 3 read the build number back from the on-disk archive, so it
+// cannot drift from what was actually built (asking ASC again would return the
+// NEXT free number once the upload has registered).
+//
 // Or via npm: `npm run ios:release` (dry-run) / `npm run ios:release -- --confirm`.
 //
 // Why this exists: builds 1–9 were cut by hand with no committed script, so each
@@ -34,6 +46,9 @@ const IPA_PATH = `${EXPORT_DIR}/App.ipa`;
 const argv = process.argv.slice(2);
 const CONFIRM = argv.includes('--confirm');
 const STATUS_ONLY = argv.includes('--status');
+const NO_UPLOAD = argv.includes('--no-upload');
+const UPLOAD_ONLY = argv.includes('--upload-only');
+const FINALIZE = argv.includes('--finalize');
 const wnIdx = argv.indexOf('--whats-new');
 const WHATS_NEW = wnIdx >= 0 ? argv[wnIdx + 1] : null;
 
@@ -168,8 +183,10 @@ for (const b of builds) {
 if (STATUS_ONLY) process.exit(0);
 
 const next = nextBuildNumber(builds);
-const whatsNew =
-  WHATS_NEW || `Build ${next}. Please test the latest changes (see the most recent commits) and report anything off.`;
+// Built per-build-number, not once: in --finalize the shipped build has already
+// registered, so `next` is one HIGHER than the build we're annotating.
+const whatsNewFor = n =>
+  WHATS_NEW || `Build ${n}. Please test the latest changes (see the most recent commits) and report anything off.`;
 
 console.log(`\nNext build number: ${next}  (marketing version stays as configured, 1.0)`);
 
@@ -181,9 +198,11 @@ if (!CONFIRM) {
   console.log('  4. xcrun altool --upload-app  (retry on Defaults.properties)');
   console.log('  5. poll ASC until the build registers, then set the "What to Test" note:');
   console.log('     ┄┄┄');
-  console.log('     ' + whatsNew.replace(/\n/g, '\n     '));
+  console.log('     ' + whatsNewFor(next).replace(/\n/g, '\n     '));
   console.log('     ┄┄┄');
   console.log('\nRe-run with --confirm to ship.');
+  console.log('Or stage it (safer under a command timeout — see the header):');
+  console.log('  --confirm --no-upload  →  --confirm --upload-only  →  --confirm --finalize');
   process.exit(0);
 }
 
@@ -192,6 +211,12 @@ const KEY = reqEnv('ASC_KEY_ID');
 const ISS = reqEnv('ASC_ISSUER_ID');
 const KEYPATH = reqEnv('ASC_KEY_PATH');
 const TEAM = reqEnv('ASC_TEAM_ID');
+
+const doBuild = !UPLOAD_ONLY && !FINALIZE;
+const doUpload = !NO_UPLOAD && !FINALIZE;
+const doFinalize = !NO_UPLOAD && !UPLOAD_ONLY;
+
+if (doBuild) {
 
 sh('Web build (vite + strip dicts + cap sync)', 'npm run ios:build', 'build/ios/ios-build.log');
 
@@ -233,16 +258,35 @@ const exportCmd = [
 sh('Export IPA', `rm -rf ${EXPORT_DIR} && ${exportCmd}`, 'build/ios/export.log');
 if (!existsSync(IPA_PATH)) throw new Error(`Export did not produce ${IPA_PATH}`);
 
-altoolUpload(KEY, ISS);
-console.log(`\n✓ Uploaded build ${next}. Apple processes it (typically VALID within 5–30 min).`);
+}
 
-console.log('\nWaiting for the build to register so we can set the What-to-Test note…');
-const registered = await pollForBuild(next);
-if (registered) {
-  await setWhatsNew(registered.id, whatsNew);
-  console.log(`✓ Set "What to Test" on build ${next} (state: ${registered.attributes.processingState}).`);
-} else {
-  console.log(`Build ${next} hadn't registered yet. Re-run with --status to watch processing,`);
-  console.log('then set the note in App Store Connect → TestFlight if needed.');
+// Later stages read the number back from the archive rather than trusting `next`
+// — once an upload registers, ASC would hand out the following number instead.
+if (!existsSync(ARCHIVE_PATH) && !doBuild) {
+  throw new Error(`No archive at ${ARCHIVE_PATH} — run with --no-upload first to build one.`);
+}
+const shipped = doBuild ? String(next) : archiveBuildNumber();
+
+if (doUpload) {
+  if (!existsSync(IPA_PATH)) throw new Error(`No .ipa at ${IPA_PATH} — run with --no-upload first.`);
+  altoolUpload(KEY, ISS);
+  console.log(`\n✓ Uploaded build ${shipped}. Apple processes it (typically VALID within 5–30 min).`);
+}
+
+if (doFinalize) {
+  console.log('\nWaiting for the build to register so we can set the What-to-Test note…');
+  const registered = await pollForBuild(shipped);
+  if (registered) {
+    await setWhatsNew(registered.id, whatsNewFor(shipped));
+    console.log(`✓ Set "What to Test" on build ${shipped} (state: ${registered.attributes.processingState}).`);
+  } else {
+    console.log(`Build ${shipped} hadn't registered yet. Re-run with --confirm --finalize to retry the note,`);
+    console.log('or set it in App Store Connect → TestFlight.');
+  }
+}
+
+if (NO_UPLOAD) {
+  console.log(`\n✓ Built + exported build ${shipped}, stopped before upload (--no-upload).`);
+  console.log('   Next: npm run ios:release -- --confirm --upload-only');
 }
 console.log('\nDone. Check processing later with: npm run ios:release -- --status');
