@@ -1,0 +1,31 @@
+{
+  "appName": "Lexica Knights",
+  "primaryLocale": "en-US",
+  "platforms": ["web", "ios", "android"],
+  "audience": "general",
+  "monetization": "iap",
+  "urls": {
+    "privacy": "https://samilamti.github.io/word-games/PRIVACY.md",
+    "support": "https://github.com/samilamti/word-games/issues",
+    "marketing": "https://samilamti.github.io/word-games/"
+  },
+  "build": { "webCommand": "npm run ios:build", "syncCommand": "true" },
+  "ios": {
+    "bundleId": "com.samixavierlamti.lexiconquest",
+    "ascAppId": "6765603467",
+    "sku": "lexica-knights-001",
+    "capabilities": ["IN_APP_PURCHASE", "GAME_CENTER"],
+    "usesNonExemptEncryption": false,
+    "primaryCategory": "GAMES",
+    "subcategories": ["GAMES_PUZZLE", "GAMES_STRATEGY"]
+  },
+  "android": { "packageName": "com.samixavierlamti.lexiconquest" },
+  "iap": [
+    {
+      "productId": "full_unlock",
+      "type": "NON_CONSUMABLE",
+      "referenceName": "Full Unlock",
+      "price": { "baseTerritory": "SWE", "target": 79 }
+    }
+  ]
+}
