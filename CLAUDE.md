@@ -56,7 +56,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - **The `Defaults.properties` altool transient error** sometimes fires on the FIRST upload after a chained build. Just retry the `xcrun altool --upload-app` command; second run typically succeeds.
 - **CocoaPods 1.16 + Ruby 4.0 crashes** without `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. We use SPM so this only matters if someone re-introduces CocoaPods.
 - **Android Gradle builds need JDK 21** — Capacitor 8's `capacitor-android` compiles at source release 21; JDK 17 fails with `invalid source release: 21`. No install needed: Android Studio's bundled JBR is 21 (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`). SDK path comes from gitignored `android/local.properties`.
-- **M2/M3 preview on a device without a console**: tap the Settings-modal title 7 times to toggle `devStore.m2Enabled` (TestFlight sandbox-purchase QA; remove when M2/M3 un-gate for App Store submission).
+- **M2/M3 preview is console-only again.** The hidden 7-tap trigger on the Settings-modal title was **removed 2026-07-29** (build 12 shipped; a hidden feature toggle is an App Review risk). `devStore.m2Enabled` now flips only via `__lexicaDev.enable()` from a JS console, so **the paywall is unreachable on a device** — re-add a QA affordance, or un-gate M2/M3, before any sandbox-purchase testing or App Store submission that needs the IAP visible.
 
 ## App Store Connect notes
 
