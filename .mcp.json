@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ship": {
+      "command": "node",
+      "args": ["/Users/hiretsu/Projects/McpGallore/servers/ship/dist/index.js"],
+      "env": {
+        "SHIP_CLI": "/Users/hiretsu/Projects/GamingTemplate/tooling/ship/cli.mjs"
+      }
+    }
+  }
+}
