@@ -23,6 +23,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `npm run android:build` — web build + strip + `cap sync android`; then Gradle: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug`
 - `scripts/android-smoke.sh [--avd NAME] [--skip-build] [--keep-running]` — full Android smoke: build → boot AVD headless → install → launch → screenshot (`/tmp/lexica-android-smoke.png`) → logcat fatal scan
 - `npm run data:publish` — publish `public/definitions/` to the R2 CDN bucket (dry-run by default, `-- --confirm` to upload; needs the four `R2_*`/`CLOUDFLARE_API_TOKEN` vars in `.env.local` — see `scripts/publish-definitions.mjs` header)
+- `scripts/verify-ipa.sh --ipa build/ios/export/App.ipa --build N [--expect TOK]… [--forbid TOK]…` — sanity-check the .ipa **before** `altool` (a stale `dist/` archives + exports perfectly happily). Exit non-zero = do not upload. Check both directions; the best `--expect` token is one that *could not* exist in an older bundle (e.g. the R2 CDN base, added 2026-07-19). Copied from the `app-store-connect-api` skill.
 - `npx tsc -b` — TypeScript check only
 
 ## Key directories
