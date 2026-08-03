@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
-import { useDevStore } from '../store/devStore.ts';
 import { useJournalStore } from '../store/journalStore.ts';
 import { definitionService, type DefEntry } from '../definitions/DefinitionService.ts';
 import { requireUnlock } from '../store/entitlementStore.ts';
@@ -35,7 +34,6 @@ export function DefinitionToast() {
   const word = useGameStore((s) => s.lastDefinedWord);
   const at = useGameStore((s) => s.lastDefinedAt);
   const locale = useGameStore((s) => s.locale);
-  const m2Enabled = useDevStore((s) => s.m2Enabled);
   const saveToJournal = useJournalStore((s) => s.save);
   const ui = useUI();
 
@@ -115,34 +113,32 @@ export function DefinitionToast() {
             EN
           </span>
         )}
-        {m2Enabled && (
-          <button
-            onClick={() => {
-              if (!requireUnlock('journal')) return; // locked → paywall
-              saveToJournal(saveWord, locale, saveDef);
-              setSavedTrigger(at);
-            }}
-            disabled={saved}
-            title={saved ? ui.savedToJournal : ui.saveToJournal}
-            style={{
-              pointerEvents: 'auto',
-              marginLeft: 'auto',
-              minHeight: 0,
-              minWidth: 0,
-              padding: '3px 10px',
-              fontSize: 12,
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap',
-              color: saved ? '#0d0d1a' : ACCENT,
-              backgroundColor: saved ? ACCENT : 'transparent',
-              border: `1px solid ${ACCENT}`,
-              borderRadius: 6,
-              cursor: saved ? 'default' : 'pointer',
-            }}
-          >
-            {saved ? `★ ${ui.saved}` : `★ ${ui.save}`}
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (!requireUnlock('journal')) return; // locked → paywall
+            saveToJournal(saveWord, locale, saveDef);
+            setSavedTrigger(at);
+          }}
+          disabled={saved}
+          title={saved ? ui.savedToJournal : ui.saveToJournal}
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 'auto',
+            minHeight: 0,
+            minWidth: 0,
+            padding: '3px 10px',
+            fontSize: 12,
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap',
+            color: saved ? '#0d0d1a' : ACCENT,
+            backgroundColor: saved ? ACCENT : 'transparent',
+            border: `1px solid ${ACCENT}`,
+            borderRadius: 6,
+            cursor: saved ? 'default' : 'pointer',
+          }}
+        >
+          {saved ? `★ ${ui.saved}` : `★ ${ui.save}`}
+        </button>
       </div>
 
       {entry.formOf && (

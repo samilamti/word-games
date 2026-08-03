@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { useDevStore } from './devStore.ts';
+import { Capacitor } from '@capacitor/core';
 import { billing } from '../billing/billing.ts';
 
 /**
@@ -39,14 +39,17 @@ export const useEntitlementStore = create<EntitlementState>((set) => ({
 }));
 
 /**
- * Gate a paid feature. Returns true if it may proceed — either because the user
- * is unlocked, OR because the monetization preview is off (the M2 dev flag is
- * the master switch for the whole unreleased bundle, so normal dev play and the
- * shipped free experience are unaffected). Otherwise opens the paywall and
- * returns false.
+ * Gate a paid feature. Returns true if it may proceed, otherwise opens the
+ * paywall and returns false.
+ *
+ * The PRODUCTION WEB build is never gated: web has no store, and the decision
+ * (see the platform-scope note) was to build no accounts/license backend for
+ * it — so a web paywall could never be satisfied by any user. The dev server
+ * IS gated so the paywall stays testable locally (`__lexicaUnlock` toggles the
+ * entitlement, and billing.purchase() simulates success under `npm run dev`).
  */
 export function requireUnlock(context: PaywallContext): boolean {
-  if (!useDevStore.getState().m2Enabled) return true;
+  if (!Capacitor.isNativePlatform() && !import.meta.env.DEV) return true;
   const s = useEntitlementStore.getState();
   if (s.isUnlocked) return true;
   s.openPaywall(context);

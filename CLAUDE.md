@@ -56,7 +56,8 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - **The `Defaults.properties` altool transient error** sometimes fires on the FIRST upload after a chained build. Just retry the `xcrun altool --upload-app` command; second run typically succeeds.
 - **CocoaPods 1.16 + Ruby 4.0 crashes** without `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. We use SPM so this only matters if someone re-introduces CocoaPods.
 - **Android Gradle builds need JDK 21** — Capacitor 8's `capacitor-android` compiles at source release 21; JDK 17 fails with `invalid source release: 21`. No install needed: Android Studio's bundled JBR is 21 (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`). SDK path comes from gitignored `android/local.properties`.
-- **M2/M3 preview is console-only again.** The hidden 7-tap trigger on the Settings-modal title was **removed 2026-07-29** (build 12 shipped; a hidden feature toggle is an App Review risk). `devStore.m2Enabled` now flips only via `__lexicaDev.enable()` from a JS console, so **the paywall is unreachable on a device** — re-add a QA affordance, or un-gate M2/M3, before any sandbox-purchase testing or App Store submission that needs the IAP visible.
+- **M2/M3 is UN-GATED as of 2026-07-29 — `devStore` and its `m2Enabled` flag are DELETED.** The journal/review/paywall are now normal user-facing features; the hidden 7-tap Settings-title trigger and `__lexicaDev` are gone too. `requireUnlock()` is the single gate: **enemies 1–2 free, 3–5 + the retention layer behind the `full_unlock` IAP** (`FREE_ENEMY_COUNT = 2` in `Game.tsx`). `__lexicaUnlock` remains as the dev entitlement toggle.
+- **The PRODUCTION WEB build is deliberately never gated** (`requireUnlock` short-circuits when `!isNativePlatform() && !import.meta.env.DEV`). Web has no store and per the platform-scope decision gets no accounts/license backend, so a web paywall could never be satisfied — but `.github/workflows/static.yml` still publishes the web build to GitHub Pages, so it must stay playable. The **dev server IS gated** so the paywall stays testable locally (`billing.purchase()` simulates success under `npm run dev`).
 
 ## App Store Connect notes
 
@@ -76,6 +77,7 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `lexica_knights_runs` — leaderboard entries (capped at 50)
 - `lexica_knights_locale` — current language code
 - `lexica_knights_accepted_words_<locale>` — per-locale dispute-accepted words
+- `lexica_knights_unlock` — cached `full_unlock` entitlement (`billing.ts`); persisted so a returning owner never flashes the paywall before RevenueCat answers. (`lexica_knights_dev`, the old M2 preview flag, is retired — the flag was deleted 2026-07-29.)
 - `lexica_knights_settings` — accessibility/feel toggles (`reduceMotion`, `soundEnabled`, `hapticsEnabled`); `settingsStore`, defaults `reduceMotion` from `prefers-reduced-motion`
 
 ## Game design

@@ -1,21 +1,16 @@
 import { useState } from 'react';
-import { useDevStore } from '../store/devStore.ts';
 import { JournalModal } from './JournalModal.tsx';
 import { requireUnlock } from '../store/entitlementStore.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 /**
  * Floating button that opens the word journal. Stacked just above the
- * leaderboard button (bottom-left). Only rendered while the M2 dev flag is on
- * (`__lexicaDev.enable()`), since the retention layer isn't user-facing until
- * monetization (M3) + delivery (M4) land.
+ * leaderboard button (bottom-left). Tapping it while locked raises the paywall
+ * — the journal is part of the paid retention layer.
  */
 export function JournalButton() {
-  const m2Enabled = useDevStore((s) => s.m2Enabled);
   const [open, setOpen] = useState(false);
   const ui = useUI();
-
-  if (!m2Enabled) return null;
 
   return (
     <>
