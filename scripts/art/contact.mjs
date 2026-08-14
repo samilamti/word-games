@@ -64,8 +64,9 @@ async function maskedSprite(rawPath, name, size) {
   if (!existsSync(master)) return sharp(rawPath).resize(size, size, { fit: 'fill' }).png().toBuffer();
 
   const meta = await sharp(master).metadata();
+  // toColourspace('b-w') keeps this a single channel; see compose.mjs.
   const alpha = await sharp(master).ensureAlpha().extractChannel('alpha')
-    .blur(1).linear(3, -2 * 255).blur(0.6).toBuffer();
+    .toColourspace('b-w').blur(1).linear(3, -2 * 255).blur(0.6).toBuffer();
   const painted = await sharp(rawPath).resize(meta.width, meta.height, { fit: 'fill' })
     .removeAlpha().toBuffer();
   return sharp(painted).joinChannel(alpha).resize(size, size, { fit: 'fill' }).png().toBuffer();

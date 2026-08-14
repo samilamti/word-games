@@ -43,26 +43,39 @@ async function composeSprite(rawPath, name) {
     throw new Error(`no Blender master at ${master} — the alpha comes from there`);
   }
 
-  const { width, height } = await sharp(master).metadata();
+  // Each stage is its own pipeline, resolved to a buffer before the next.
+  // sharp does not honour the call order of resize and joinChannel within one
+  // pipeline — it resizes the base first and leaves the joined channel at its
+  // original size, which silently yields a full-size image with a dead alpha.
+  // Resizing both inputs to the ship size up front removes the ambiguity.
 
   // Erode, then feather. Erode pulls the mask inside the painted edge so no
-  // overshoot survives; the blur that follows softens the cut so the sprite
-  // doesn't read as a sticker at small sizes.
+  // img2img overshoot survives; the feather stops the sprite reading as a
+  // sticker at small sizes.
+  //
+  // toColourspace('b-w') is load-bearing too: extractChannel alone still encodes
+  // three identical channels, and joinChannel would append all three.
   const alpha = await sharp(master)
     .ensureAlpha()
     .extractChannel('alpha')
+    .toColourspace('b-w')
+    .resize(SHIP_SIZE, SHIP_SIZE, { fit: 'fill' })
     .blur(1)
     .linear(3, -2 * 255) // steepen: pushes soft edge pixels to 0, keeps the core at 255
     .blur(0.6)
+    .raw()
     .toBuffer();
 
-  const painted = await sharp(rawPath).resize(width, height, { fit: 'fill' }).removeAlpha().toBuffer();
+  const painted = await sharp(rawPath)
+    .resize(SHIP_SIZE, SHIP_SIZE, { fit: 'fill' })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
 
   mkdirSync(SPRITE_OUT, { recursive: true });
   const out = join(SPRITE_OUT, `${name}.png`);
-  await sharp(painted)
-    .joinChannel(alpha)
-    .resize(SHIP_SIZE, SHIP_SIZE, { fit: 'fill' })
+  await sharp(painted, { raw: { width: SHIP_SIZE, height: SHIP_SIZE, channels: 3 } })
+    .joinChannel(alpha, { raw: { width: SHIP_SIZE, height: SHIP_SIZE, channels: 1 } })
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(out);
 
