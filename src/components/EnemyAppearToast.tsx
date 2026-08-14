@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { soundManager } from '../audio/SoundManager.ts';
+import { portraitUrl } from '../types/enemies.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 /**
@@ -82,6 +83,26 @@ export function EnemyAppearToast() {
       >
         {ui.appears}
       </div>
+      {/* Portrait art. This is the one moment the player meets the enemy with
+          nothing else competing for attention, so it is worth the detail the
+          86px combat sprite cannot carry. Hides itself if the art is absent, so
+          the toast degrades to the text-only version it has always been. */}
+      <img
+        src={portraitUrl(enemy.type)}
+        alt=""
+        onError={e => {
+          e.currentTarget.style.display = 'none';
+        }}
+        style={{
+          width: 132,
+          height: 132,
+          objectFit: 'cover',
+          borderRadius: 12,
+          border: '2px solid #ffd54f',
+          marginBottom: 12,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+        }}
+      />
       <div
         style={{
           fontSize: 13,

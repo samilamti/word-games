@@ -8,6 +8,21 @@
 
 export type EnemyType = 'goblin' | 'orc' | 'troll' | 'undead' | 'wraith';
 
+/** The player character, rendered by the same Blender rig as the enemies so the
+ *  cast shares one camera and one light. Not an EnemyType — it never spawns as
+ *  an opponent — but it lives beside them because it is the same kind of asset. */
+export type CharacterName = EnemyType | 'hero';
+
+export const HERO_SPRITE_URL = 'enemies/hero.png';
+
+/** Bust art for the large surfaces: the arrival toast and the victory and defeat
+ *  cards. Separate from the combat sprite because those surfaces show a
+ *  character an order of magnitude larger, where painterly detail actually
+ *  survives. Relative path, like spriteUrl, for the capacitor:// scheme. */
+export function portraitUrl(name: CharacterName): string {
+  return `art/portraits/${name}.webp`;
+}
+
 export interface EnemyDef {
   type: EnemyType;
   name: string;

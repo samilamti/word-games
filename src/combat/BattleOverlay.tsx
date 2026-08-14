@@ -4,7 +4,7 @@ import type { CombatEvent } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { soundManager } from '../audio/SoundManager.ts';
-import { ENEMY_CATALOG } from '../types/enemies.ts';
+import { ENEMY_CATALOG, HERO_SPRITE_URL } from '../types/enemies.ts';
 
 // Reference canvas size at which character positions and sprite scales were
 // designed. Real canvas size now tracks the rendered GameBoard (responsive
@@ -479,23 +479,46 @@ function playSoundForEvent(type: CombatEvent['type']) {
 
 // ─── Body builders (player Graphics, enemy Sprite) ───
 
+/** On-screen height of a character's visible figure, in design px. Every sprite
+ *  is scaled to hit this regardless of the source resolution. */
+const FIGURE_HEIGHT = 85;
+
+/** Fraction of a rendered frame the figure occupies. The Blender camera leaves
+ *  transparent margin above the head and below the feet; the sprites are all
+ *  shot with the same rig, so one number covers the cast. */
+const FIGURE_FRACTION = 0.8;
+
 function buildPlayerBody(): Container {
+  // Prefer the rendered hero, but keep the hand-drawn wizard as a fallback so a
+  // missing or still-loading texture degrades to a drawn character rather than
+  // an empty space where the player should be.
+  try {
+    const texture = Texture.from(HERO_SPRITE_URL);
+    if (texture && texture !== Texture.EMPTY && texture.width > 1) {
+      return buildSpriteBody(texture);
+    }
+  } catch {
+    // fall through to the vector wizard
+  }
   const g = new Graphics();
   drawWizard(g);
   g.scale.set(1.15);
   return g;
 }
 
-/** Wrap a Blender-rendered enemy PNG as a Sprite with anchor pinned to the
- *  feet so it lines up with the container's origin (same convention as the
- *  Graphics-based bodies, which draw the shadow at y≈0). */
-function buildEnemySpriteBody(texture: Texture): Container {
+/** Wrap a rendered character PNG as a Sprite with the anchor pinned to the feet
+ *  so it lines up with the container's origin (same convention as the
+ *  Graphics-based bodies, which draw the shadow at y≈0).
+ *
+ *  The scale is derived from the texture rather than hardcoded, so the same code
+ *  serves the 1024px Blender masters and the 512px painted sprites the art
+ *  pipeline ships — otherwise swapping resolutions silently doubles every
+ *  character's size. */
+function buildSpriteBody(texture: Texture, override?: number): Container {
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, 0.95);
-  // The rendered character occupies roughly 80% of the 1024px tall PNG; the
-  // remaining margin is transparent space. Scale to make the visible figure
-  // roughly the same height as the original Graphics goblin (~85 design px).
-  sprite.scale.set(0.105);
+  const fitted = FIGURE_HEIGHT / (texture.height * FIGURE_FRACTION);
+  sprite.scale.set(override ?? fitted);
   return sprite;
 }
 
@@ -530,13 +553,13 @@ export function BattleOverlay() {
     const app = new Application();
 
     (async () => {
-      // Preload all enemy textures so swapping mid-game is instant. If the
-      // load fails (e.g. file missing during dev), we fall back to the
-      // vector goblin in buildEnemyFallbackBody.
+      // Preload every character texture so swapping mid-game is instant. If a
+      // load fails (e.g. file missing during dev), the body builders fall back
+      // to the vector wizard and goblin.
       try {
-        await Assets.load(ENEMY_CATALOG.map(e => e.spriteUrl));
+        await Assets.load([...ENEMY_CATALOG.map(e => e.spriteUrl), HERO_SPRITE_URL]);
       } catch (err) {
-        console.warn('[BattleOverlay] enemy texture preload failed:', err);
+        console.warn('[BattleOverlay] character texture preload failed:', err);
       }
       if (destroyed) return;
 
@@ -545,6 +568,13 @@ export function BattleOverlay() {
         height: REFERENCE_SIZE,
         backgroundAlpha: 0,
         antialias: true,
+        // Render at the device's pixel density instead of 1:1 CSS pixels. The
+        // canvas was previously upscaled by the browser on every phone, which
+        // softened the sprites and the damage numbers for no reason. Capped at
+        // 2 because the third pixel of density costs fill rate and buys very
+        // little on a sprite this size.
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        autoDensity: true,
       });
       if (destroyed) { app.destroy(true); return; }
       appRef.current = app;
@@ -568,7 +598,7 @@ export function BattleOverlay() {
         try {
           const tex = Texture.from(enemyDef.spriteUrl);
           if (!tex || tex === Texture.EMPTY) return buildEnemyFallbackBody();
-          return buildEnemySpriteBody(tex);
+          return buildSpriteBody(tex);
         } catch {
           return buildEnemyFallbackBody();
         }
@@ -727,7 +757,7 @@ export function BattleOverlay() {
         try {
           const tex = Texture.from(state.enemy.spriteUrl);
           const body = (tex && tex !== Texture.EMPTY)
-            ? buildEnemySpriteBody(tex)
+            ? buildSpriteBody(tex)
             : buildEnemyFallbackBody();
           enemyRef.current.swapBody(body);
         } catch {

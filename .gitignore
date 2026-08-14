@@ -48,3 +48,14 @@ public/definitions/
 *.njsproj
 *.sln
 *.sw?
+
+# Local art/audio generation: venv, raw model output, and review sheets. All
+# regenerable and large; only the finished assets under public/ are committed.
+scripts/art/.venv-art/
+resources/art/raw/
+resources/art/contact/
+resources/audio/raw/
+
+# Python bytecode from the Blender scripts
+__pycache__/
+*.pyc

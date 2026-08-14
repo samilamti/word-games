@@ -1,0 +1,5 @@
+{
+  "//": "Chosen candidate per asset, recorded so the whole set can be rebuilt with `compose.mjs --all`. Paths are repo-relative and point at raw generator output, which is gitignored — re-running gen.py with the same seed reproduces them exactly.",
+  "sprites": {},
+  "portraits": {}
+}

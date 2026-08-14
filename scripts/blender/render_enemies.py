@@ -479,14 +479,97 @@ def build_wraith():
              rotation=(math.radians(180), 0, math.radians(tilt)))
 
 
+def build_hero():
+    """The player character: a knight-scribe.
+
+    Built here with the enemies rather than beside them, because the shared
+    camera and lighting are exactly what make a cast look like one cast — the
+    hero previously existed only as hand-drawn vectors in the combat overlay and
+    never quite matched the sprites it fought.
+
+    The title is "Lexica Knights" and the verb is spelling words, so the
+    character is a knight whose weapon is a quill: armour and a sword silhouette
+    for the knight, a plumed nib and a glowing blade for the word-magic. Violet
+    and gold match the app's own palette.
+    """
+    skin = make_material("HeroSkin", (0.96, 0.80, 0.66))
+    steel = make_material("HeroSteel", (0.72, 0.75, 0.85), roughness=0.28,
+                          metallic=0.85)
+    violet = make_material("HeroViolet", (0.36, 0.24, 0.62), roughness=0.55)
+    gold = make_material("HeroGold", (1.0, 0.78, 0.25), roughness=0.25,
+                         metallic=0.9)
+    rune = make_material("HeroRune", (0.35, 0.85, 1.0), roughness=0.2,
+                         emission=6.0)
+
+    base_legs(skin, (0.22, 0.20, 0.34), height=0.52, x_spread=0.23)
+
+    # Torso — a violet tabard with a steel breastplate sitting proud of it. The
+    # plate is a squashed sphere rather than a box: a cube reads as a flat
+    # signboard from the camera's near-front angle.
+    sphere("Body", (0, 0, 1.02), (0.50, 0.38, 0.52), violet)
+    sphere("Breastplate", (0, -0.12, 1.02), (0.44, 0.30, 0.44), steel)
+    # Belt sits inside the tabard's silhouette; a wider disc pokes out at the
+    # hips and reads as a stray ring.
+    cyl("Belt", (0, 0, 0.72), 0.38, 0.11, gold,
+        rotation=(math.radians(90), 0, 0))
+
+    # Pauldrons — the widest points of the silhouette, which is most of what
+    # survives at 86px.
+    sphere("LeftPauldron", (-0.54, -0.02, 1.30), (0.25, 0.23, 0.18), steel)
+    sphere("RightPauldron", (0.54, -0.02, 1.30), (0.25, 0.23, 0.18), steel)
+
+    # Cloak hanging behind the shoulders. Cones point +Z, so flip it to hang.
+    cone("Cloak", (0, 0.26, 0.98), 0.56, 1.30, violet,
+         rotation=(math.radians(180), 0, 0))
+
+    head_scale = (0.56, 0.52, 0.58)
+    head_z = 1.86
+    sphere("Head", (0, -0.05, head_z), head_scale, skin)
+    head_front_y = -0.05 - head_scale[1]  # = -0.57
+
+    # Open helm. The band sits at the BROW, not the crown: any higher and it
+    # reads as a hairline rather than a helmet, which is the whole difference
+    # between a knight and a person. Gold so it separates from the steel plate.
+    cyl("HelmBand", (0, -0.05, head_z + 0.22), 0.575, 0.17, gold,
+        rotation=(math.radians(90), 0, 0))
+    # Dome over the crown, slightly proud of the head so it is clearly a shell.
+    sphere("HelmDome", (0, -0.03, head_z + 0.24), (0.56, 0.52, 0.42), steel)
+    # Crest, big enough to survive the sprite's downscale.
+    cone("HelmCrest", (0, 0.04, head_z + 0.86), 0.15, 0.60, violet)
+
+    base_arms(skin, length=0.62, x_offset=0.54, z_center=1.06, tilt=12)
+    base_eyes(head_front_y, z_center=head_z + 0.06, x_spread=0.16,
+              color=(0.10, 0.18, 0.42), size=0.08)
+    base_smile(head_front_y, z_center=head_z - 0.22, color=(0.45, 0.20, 0.18),
+               width=0.16, height=0.035)
+
+    # The rune-blade, held up from the right hand. Everything is stacked on one
+    # vertical line through x=0.78 so the parts genuinely overlap: a tilted
+    # chain of primitives is how you end up with a sword floating beside a fist.
+    sword_x = 0.78
+    cyl("SwordGrip", (sword_x, 0.02, 0.98), 0.05, 0.36, gold)
+    cyl("SwordPommel", (sword_x, 0.02, 0.78), 0.075, 0.10, gold)
+    cube("SwordGuard", (sword_x, 0.02, 1.18), (0.22, 0.07, 0.05), gold)
+    # Blade base overlaps the guard deeply; a marginal join opens up under any
+    # later tweak.
+    cone("SwordBlade", (sword_x, 0.02, 1.86), 0.115, 1.42, steel)
+    # Rune light up the flat of the blade. It has to stand clearly proud of the
+    # front face — buried inside the steel it contributes nothing, and this glow
+    # is the one cue that says the weapon is a word rather than a blade.
+    cyl("SwordRune", (sword_x, -0.10, 1.74), 0.045, 1.05, rune)
+
+
 # ─── Render driver ─────────────────────────────────────────────────────────
 
+# The hero rides along with the enemies so the whole cast shares one camera and
+# one lighting rig; the app loads it from the same directory.
 ENEMIES = [
     ("goblin", build_goblin),
     ("orc", build_orc),
     ("troll", build_troll),
     ("undead", build_undead),
     ("wraith", build_wraith),
+    ("hero", build_hero),
 ]
 
 

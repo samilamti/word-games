@@ -19,7 +19,7 @@ import { TutorialModal } from './TutorialModal.tsx';
 import { PremiumHintToast } from './PremiumHintToast.tsx';
 import { Paywall } from './Paywall.tsx';
 import { requireUnlock } from '../store/entitlementStore.ts';
-import { ENEMY_CATALOG } from '../types/enemies.ts';
+import { ENEMY_CATALOG, portraitUrl } from '../types/enemies.ts';
 import { recordRun } from '../leaderboard/leaderboard.ts';
 import { soundManager } from '../audio/SoundManager.ts';
 import { triggerRumble } from '../native/init.ts';
@@ -72,6 +72,7 @@ export function Game() {
   const replayEnemySpawnToast = useGameStore(s => s.replayEnemySpawnToast);
   // Fractions rather than raw HP: selecting on the ratio means the music effect
   // re-runs only when the danger threshold could actually have moved.
+  const enemyType = useGameStore(s => s.enemy?.type);
   const enemyHpPct = useGameStore(s => (s.enemy ? s.enemy.hp / s.enemy.maxHp : 1));
   const playerHpPct = useGameStore(s => s.playerHp / s.playerMaxHp);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
@@ -342,6 +343,28 @@ export function Game() {
               textAlign: 'center',
             }}
           >
+            {/* Victory shows the hero, defeat shows who beat you — the card is
+                the one place a fight gets a face. Hides itself if the portrait
+                is missing, leaving the original text-only card. */}
+            <img
+              src={portraitUrl(phase === 'victory' ? 'hero' : (enemyType ?? 'goblin'))}
+              alt=""
+              onError={e => {
+                e.currentTarget.style.display = 'none';
+              }}
+              style={{
+                width: 150,
+                height: 150,
+                objectFit: 'cover',
+                borderRadius: 14,
+                border: `2px solid ${phase === 'victory' ? '#ffd54f' : '#ef5350'}`,
+                marginBottom: 18,
+                boxShadow:
+                  phase === 'victory'
+                    ? '0 0 28px rgba(255, 213, 79, 0.4)'
+                    : '0 0 28px rgba(239, 83, 80, 0.35)',
+              }}
+            />
             <h2
               style={{
                 fontSize: 36,
