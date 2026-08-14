@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
+import { soundManager } from '../audio/SoundManager.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 /**
@@ -14,6 +16,13 @@ export function EnemyAppearToast() {
   const enemy = useGameStore(s => s.enemy);
   const enemyAppearAt = useGameStore(s => s.enemyAppearAt);
   const ui = useUI();
+
+  // Sting on each spawn. Keyed on the same timestamp the animation restarts on,
+  // so a replayed toast is scored too.
+  useEffect(() => {
+    if (!enemyAppearAt) return;
+    soundManager.play('enemyAppear');
+  }, [enemyAppearAt]);
 
   if (!enemy || !enemyAppearAt) return null;
 

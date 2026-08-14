@@ -1,32 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import type { CSSProperties } from 'react';
-import type { BoardCell, PremiumType } from '../types/index.ts';
+import type { BoardCell } from '../types/index.ts';
 import { BOARD_SIZE } from '../types/index.ts';
 import { useGameStore } from '../store/gameStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUI } from '../i18n/useUI.ts';
+import type { UIStrings } from '../i18n/locales.ts';
+import { PremiumMarker, PREMIUM_COLORS, premiumLabel } from './PremiumMarker.tsx';
 
 const GAP = 2;
-
-const PREMIUM_COLORS: Record<PremiumType, string> = {
-  DOUBLE_LETTER: '#a8d8ea',
-  TRIPLE_LETTER: '#2196f3',
-  DOUBLE_WORD: '#f48fb1',
-  TRIPLE_WORD: '#e53935',
-  GEM_FORGE: '#66bb6a',
-  VOID: '#1a1a2e',
-  CENTER: '#ffd54f',
-};
-
-const PREMIUM_LABELS: Record<PremiumType, string> = {
-  DOUBLE_LETTER: 'DL',
-  TRIPLE_LETTER: 'TL',
-  DOUBLE_WORD: 'DW',
-  TRIPLE_WORD: 'TW',
-  GEM_FORGE: 'GF',
-  VOID: '',
-  CENTER: '★',
-};
 
 const TIER_COLORS: Record<string, string> = {
   common: '#f5e6c8',
@@ -51,9 +33,11 @@ interface CellProps {
   onClick: (row: number, col: number) => void;
   /** Localized aria-label for the blank/wild tile marker. */
   blankTileLabel: string;
+  /** Full string table, for the premium markers' accessible names. */
+  ui: UIStrings;
 }
 
-function Cell({ cell, isPending, dropIndex, onClick, blankTileLabel }: CellProps) {
+function Cell({ cell, isPending, dropIndex, onClick, blankTileLabel, ui }: CellProps) {
   const handleClick = useCallback(() => {
     onClick(cell.row, cell.col);
   }, [cell.row, cell.col, onClick]);
@@ -101,9 +85,11 @@ function Cell({ cell, isPending, dropIndex, onClick, blankTileLabel }: CellProps
     justifyContent: 'center',
     cursor: isVoid ? 'not-allowed' : hasTile && isPending ? 'pointer' : 'default',
     position: 'relative',
-    fontSize: hasTile ? 'calc(var(--tile-size) * 0.55)' : 'calc(var(--tile-size) * 0.28)',
+    // Empty cells no longer carry text of their own — PremiumMarker owns its
+    // own typography so the glyph stays legible down to a 20px tile.
+    fontSize: hasTile ? 'calc(var(--tile-size) * 0.55)' : undefined,
     fontWeight: hasTile ? 'bold' : 'normal',
-    color: hasTile ? (isEnemy ? '#ede9ff' : '#1a1a2e') : '#8888aa',
+    color: hasTile ? (isEnemy ? '#ede9ff' : '#1a1a2e') : undefined,
     userSelect: 'none',
     boxSizing: 'border-box',
   };
@@ -152,7 +138,7 @@ function Cell({ cell, isPending, dropIndex, onClick, blankTileLabel }: CellProps
           </span>
         </>
       ) : !isVoid && cell.premiumType ? (
-        PREMIUM_LABELS[cell.premiumType]
+        <PremiumMarker type={cell.premiumType} label={premiumLabel(cell.premiumType, ui)} />
       ) : null}
     </div>
   );
@@ -216,6 +202,7 @@ export function GameBoard() {
           dropIndex={dropIndices?.get(`${cell.row},${cell.col}`)}
           onClick={handleCellClick}
           blankTileLabel={ui.blankTile}
+          ui={ui}
         />
       ))}
     </div>

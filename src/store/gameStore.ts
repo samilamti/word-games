@@ -29,7 +29,10 @@ export interface EnemyState {
   spriteUrl: string;
   tagline: string;
   damageMultiplier: number;
-  pickRank: number;
+  pickPercentile: number;
+  maxWordLen: number;
+  maxNewTiles: number;
+  maxDamagePerTurn: number;
 }
 
 interface PendingTile {
@@ -133,6 +136,10 @@ export interface GameState {
   // Actions
   initGame: (enemyIndex?: number) => void;
   nextEnemy: () => void;
+  /** Re-fire the "a wild X appears" notice. Needed because the intro guide opens
+   *  over a freshly-started game and outlives the toast's own animation, so the
+   *  spawn beat would otherwise play to nobody. */
+  replayEnemySpawnToast: () => void;
   setDictionaryLoaded: (loaded: boolean) => void;
   setPlayerAlias: (alias: string | null) => void;
   setLocale: (locale: LocaleCode) => void;
@@ -205,7 +212,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       spriteUrl: def.spriteUrl,
       tagline: enemyStrings.tagline,
       damageMultiplier: def.damageMultiplier,
-      pickRank: def.pickRank,
+      pickPercentile: def.pickPercentile,
+      maxWordLen: def.maxWordLen,
+      maxNewTiles: def.maxNewTiles,
+      maxDamagePerTurn: def.maxDamagePerTurn,
     };
     const tileBag = new TileBag(LOCALES[get().locale]);
     const rack = tileBag.draw(RACK_SIZE);
@@ -254,6 +264,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       get().initGame(next);
     }
   },
+
+  replayEnemySpawnToast: () => set({ enemyAppearAt: Date.now() }),
 
   setDictionaryLoaded: (loaded: boolean) => set({ dictionaryLoaded: loaded }),
 
@@ -652,7 +664,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const ui = LOCALES[locale].ui;
     const alphabet = LOCALES[locale].letters.map(l => l.letter);
     const move = findBestNpcMove(grid, npcRack, {
-      pickRank: enemy.pickRank,
+      pickPercentile: enemy.pickPercentile,
+      maxWordLen: enemy.maxWordLen,
+      maxNewTiles: enemy.maxNewTiles,
       timeBudgetMs: 120,
       alphabet,
     });
@@ -669,10 +683,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         grid[p.row][p.col].premiumUsed = true;
       }
 
-      // NPC words are worth more than the player's: scale by the per-enemy
-      // difficulty multiplier, then apply player defense as a flat mitigation.
+      // Scale the NPC's word by the per-enemy difficulty multiplier, clamp it to
+      // the enemy's per-turn ceiling (so a lucky premium-square hit can't spike a
+      // beginner out of a fight), then apply player defense as flat mitigation.
       const raw = Math.round(move.score.totalDamage * enemy.damageMultiplier);
-      const damage = Math.max(1, raw - playerDefense);
+      const damage = Math.max(1, Math.min(raw, enemy.maxDamagePerTurn) - playerDefense);
       const newHp = Math.max(0, playerHp - damage);
 
       // Remove the used tiles from the NPC rack and refill from its own bag.

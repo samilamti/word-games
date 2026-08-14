@@ -88,7 +88,7 @@ function LanguageModal({ onClose }: ModalProps) {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 'bold' }}>{loc.nativeName}</div>
                   <div style={{ fontSize: 11, color: isActive ? '#fff8d0' : '#888' }}>
-                    {loc.name} · {tileCount} tiles
+                    {loc.name} · {ui.localeTiles.replace('{n}', String(tileCount))}
                   </div>
                 </div>
                 {isActive && <span style={{ fontSize: 16 }}>✓</span>}
@@ -98,7 +98,7 @@ function LanguageModal({ onClose }: ModalProps) {
         </div>
 
         <div style={{ marginTop: 16, fontSize: 11, color: '#666', textAlign: 'center', lineHeight: 1.4 }}>
-          Switching languages starts a fresh game with that language's tile distribution and dictionary.
+          {ui.localeSwitchNote}
         </div>
       </div>
     </div>

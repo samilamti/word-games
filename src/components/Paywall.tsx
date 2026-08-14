@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useEntitlementStore, type PaywallContext } from '../store/entitlementStore.ts';
 import { billing } from '../billing/billing.ts';
+import { soundManager } from '../audio/SoundManager.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 /**
@@ -47,6 +48,7 @@ export function Paywall() {
     try {
       const ok = kind === 'buy' ? await billing.purchase() : await billing.restore();
       if (ok) {
+        soundManager.play('purchase');
         setUnlocked(true);
         closePaywall();
       } else {

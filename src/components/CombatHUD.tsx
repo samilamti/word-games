@@ -57,7 +57,7 @@ export function CombatHUD() {
           {lastScore.words.map((w, i) => (
             <div key={i}>
               {ui.hudWordDmg.replace('{word}', w.text).replace('{n}', String(w.finalScore))}
-              {w.wordMultiplier > 1 ? ` (x${w.wordMultiplier})` : ''}
+              {w.wordMultiplier > 1 ? ` (×${w.wordMultiplier})` : ''}
             </div>
           ))}
           {lastScore.mechanicBonus > 0 && (

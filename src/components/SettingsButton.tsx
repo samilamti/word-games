@@ -69,10 +69,13 @@ function SettingsModal({ onClose }: ModalProps) {
   const ui = useUI();
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
   const soundEnabled = useSettingsStore(s => s.soundEnabled);
+  const musicEnabled = useSettingsStore(s => s.musicEnabled);
   const hapticsEnabled = useSettingsStore(s => s.hapticsEnabled);
   const setReduceMotion = useSettingsStore(s => s.setReduceMotion);
   const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
+  const setMusicEnabled = useSettingsStore(s => s.setMusicEnabled);
   const setHapticsEnabled = useSettingsStore(s => s.setHapticsEnabled);
+  const openTutorial = useSettingsStore(s => s.openTutorial);
 
   return (
     <div
@@ -122,9 +125,35 @@ function SettingsModal({ onClose }: ModalProps) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ToggleRow label={ui.music} on={musicEnabled} onChange={setMusicEnabled} />
           <ToggleRow label={ui.soundEffects} on={soundEnabled} onChange={setSoundEnabled} />
           <ToggleRow label={ui.haptics} on={hapticsEnabled} onChange={setHapticsEnabled} />
           <ToggleRow label={ui.reduceMotion} on={reduceMotion} onChange={setReduceMotion} />
+          <button
+            onClick={() => {
+              onClose();
+              openTutorial();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '12px 16px',
+              backgroundColor: '#16162a',
+              border: '2px solid #3a3a5c',
+              borderRadius: 8,
+              color: '#e0e0e0',
+              fontSize: 15,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <span>{ui.howToPlay}</span>
+            <span aria-hidden="true" style={{ color: '#ffd54f' }}>
+              ?
+            </span>
+          </button>
         </div>
 
       </div>

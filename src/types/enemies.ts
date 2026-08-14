@@ -12,75 +12,113 @@ export interface EnemyDef {
   type: EnemyType;
   name: string;
   maxHp: number;
+  /** Cosmetic stat shown in the HP-bar text. Kept in sync with
+   *  `maxDamagePerTurn` so the number the player reads is the number they can
+   *  actually take in one hit. */
   attack: number;
   defense: number;
   spriteUrl: string;
   /** Spoken hook shown in the appears-toast under the name. */
   tagline: string;
   /** NPC word-damage scaling, applied to the NPC's word score. Ramps up across
-   *  the campaign. The earliest enemy sits below 1 (under-damages the player's
-   *  same word) to give beginners breathing room; later enemies climb above 1. */
+   *  the campaign. Early enemies sit well below 1 (under-damaging the player's
+   *  same word) to give beginners breathing room; later enemies climb above 1.
+   *  This shapes small and medium hits; `maxDamagePerTurn` bounds the big ones. */
   damageMultiplier: number;
-  /** Word-strength lever passed to the NPC move search: 0 = play the strongest
-   *  legal word found; higher = deliberately pick a weaker (k-th best) word so
-   *  early enemies feel less clever. */
-  pickRank: number;
+  /** Where in the ranked move list the NPC picks, as a fraction: 0 = the
+   *  strongest legal word found, 1 = the weakest. Replaces the old absolute
+   *  `pickRank`, which silently inverted on sparse boards — a rank of 4 clamps
+   *  to "best move" whenever the search finds fewer than 5 candidates, i.e.
+   *  exactly during the opening turns when a beginner is most vulnerable. */
+  pickPercentile: number;
+  /** Longest candidate word the NPC search will consider. Low values keep weak
+   *  enemies playing short words, which visibly telegraphs difficulty. */
+  maxWordLen: number;
+  /** How many rack letters the NPC may spend on one move. */
+  maxNewTiles: number;
+  /** Hard ceiling on post-multiplier damage from a single enemy turn. The
+   *  guarantee that makes the difficulty curve provable: a lucky premium-square
+   *  hit can no longer spike a beginner out of a fight. */
+  maxDamagePerTurn: number;
 }
 
+// Difficulty curve (rebalanced 2026-08-14 after beta feedback that the opening
+// fights demanded long words). Three levers move together per enemy:
+//   - maxWordLen/maxNewTiles bound the NPC's raw score at the source,
+//   - damageMultiplier shapes the small-to-medium hits,
+//   - maxDamagePerTurn caps the spikes.
+// Expected incoming damage per turn lands near 6 / 10 / 13 / 16 / 19 — a linear
+// ramp, where the old curve compounded HP, multiplier and move quality at once.
+// See enemies.test.ts, which asserts the monotonicity and the goblin guarantee.
 export const ENEMY_CATALOG: EnemyDef[] = [
   {
     type: 'goblin',
     name: 'Ink Goblin',
-    maxHp: 80,
+    maxHp: 60,
     attack: 8,
     defense: 0,
     spriteUrl: 'enemies/goblin.png',
     tagline: 'A scrappy little scribbler with a poisoned pen.',
-    damageMultiplier: 0.85,
-    pickRank: 4,
+    damageMultiplier: 0.5,
+    pickPercentile: 0.75,
+    maxWordLen: 4,
+    maxNewTiles: 3,
+    maxDamagePerTurn: 8,
   },
   {
     type: 'orc',
     name: 'Brute Orc',
-    maxHp: 120,
-    attack: 11,
+    maxHp: 90,
+    attack: 13,
     defense: 1,
     spriteUrl: 'enemies/orc.png',
     tagline: 'Tusked, axe-handed, and unimpressed by your vocabulary.',
-    damageMultiplier: 1.05,
-    pickRank: 3,
+    damageMultiplier: 0.7,
+    pickPercentile: 0.5,
+    maxWordLen: 5,
+    maxNewTiles: 4,
+    maxDamagePerTurn: 13,
   },
   {
     type: 'troll',
     name: 'Cave Troll',
-    maxHp: 170,
-    attack: 13,
+    maxHp: 130,
+    attack: 16,
     defense: 2,
     spriteUrl: 'enemies/troll.png',
     tagline: 'Bigger than a bookshelf and twice as stubborn.',
-    damageMultiplier: 1.25,
-    pickRank: 2,
+    damageMultiplier: 0.9,
+    pickPercentile: 0.3,
+    maxWordLen: 6,
+    maxNewTiles: 5,
+    maxDamagePerTurn: 16,
   },
   {
     type: 'undead',
     name: 'Risen Undead',
-    maxHp: 200,
-    attack: 15,
+    maxHp: 165,
+    attack: 21,
     defense: 1,
     spriteUrl: 'enemies/undead.png',
     tagline: 'Whispering forgotten words from a forgotten tongue.',
-    damageMultiplier: 1.45,
-    pickRank: 1,
+    damageMultiplier: 1.05,
+    pickPercentile: 0.12,
+    maxWordLen: 7,
+    maxNewTiles: 5,
+    maxDamagePerTurn: 21,
   },
   {
     type: 'wraith',
     name: 'Shadow Wraith',
-    maxHp: 240,
-    attack: 18,
+    maxHp: 210,
+    attack: 26,
     defense: 3,
     spriteUrl: 'enemies/wraith.png',
     tagline: 'A grief without a body, hungry for sentences.',
-    damageMultiplier: 1.70,
-    pickRank: 0,
+    damageMultiplier: 1.2,
+    pickPercentile: 0,
+    maxWordLen: 8,
+    maxNewTiles: 5,
+    maxDamagePerTurn: 26,
   },
 ];

@@ -33,6 +33,7 @@ export interface UIStrings {
   language: string;
   playAgain: string;
   restart: string;
+  retryFight: string;
   nextEnemy: string;
   victory: string;
   defeated: string;
@@ -59,7 +60,35 @@ export interface UIStrings {
   settings: string;
   reduceMotion: string;
   soundEffects: string;
+  music: string;
   haptics: string;
+  howToPlay: string;
+  // Premium squares — used for the board aria-labels, the legend rows and the
+  // placement hint toast, so one translation serves all three surfaces.
+  premiumDoubleLetter: string;
+  premiumTripleLetter: string;
+  premiumDoubleWord: string;
+  premiumTripleWord: string;
+  premiumGemForge: string;
+  premiumCenter: string;
+  premiumVoid: string;
+  legendTitle: string;
+  // Tutorial
+  tutSpellTitle: string;
+  tutSpellBody: string;
+  tutAttackTitle: string;
+  tutAttackBody: string;
+  tutPremiumTitle: string;
+  tutPremiumBody: string;
+  tutConnectTitle: string;
+  tutConnectBody: string;
+  tutBattleTitle: string;
+  tutBattleBody: string;
+  tutSkip: string;
+  tutNext: string;
+  tutBack: string;
+  tutFight: string;
+  tutStepOf: string; // {n}, {total}
   // Generic
   close: string;
   done: string;
@@ -159,6 +188,9 @@ export interface UIStrings {
   hudWordDmg: string; // {word}, {n}
   hudBonus: string; // {n}
   hudTotalDamage: string; // {n}
+  // Language picker
+  localeTiles: string; // {n}
+  localeSwitchNote: string;
   // Accessibility labels
   changeLanguage: string;
   blankTile: string;
@@ -231,6 +263,7 @@ const EN: LocaleDef = {
     language: 'Language',
     playAgain: 'Play Again',
     restart: 'Restart',
+    retryFight: 'Retry Fight',
     nextEnemy: 'Next Enemy',
     victory: 'VICTORY!',
     defeated: 'DEFEATED',
@@ -256,7 +289,32 @@ const EN: LocaleDef = {
     settings: 'Settings',
     reduceMotion: 'Reduce motion',
     soundEffects: 'Sound effects',
+    music: 'Music',
     haptics: 'Vibration',
+    howToPlay: 'How to play',
+    premiumDoubleLetter: 'Letter ×2',
+    premiumTripleLetter: 'Letter ×3',
+    premiumDoubleWord: 'Word ×2',
+    premiumTripleWord: 'Word ×3',
+    premiumGemForge: 'Gem Forge — letter ×2',
+    premiumCenter: 'Start here — word ×2',
+    premiumVoid: 'Blocked square',
+    legendTitle: 'Power squares',
+    tutSpellTitle: 'Spell a word',
+    tutSpellBody: 'Drag letters from your rack onto the board — or just tap them — to spell a word.',
+    tutAttackTitle: 'Words are weapons',
+    tutAttackBody: 'Submit your word to strike the enemy. The longer the word, the harder it hits.',
+    tutPremiumTitle: 'Power squares',
+    tutPremiumBody: 'Coloured squares multiply your damage — either one letter, or your whole word.',
+    tutConnectTitle: 'Connect your words',
+    tutConnectBody: 'Your first word must cover the star. After that, every new word has to touch the letters already on the board.',
+    tutBattleTitle: 'Win the battle',
+    tutBattleBody: 'The enemy spells a word back at you every turn, and swapping or passing costs you a turn. Empty their health before yours runs out!',
+    tutSkip: 'Skip',
+    tutNext: 'Next',
+    tutBack: 'Back',
+    tutFight: 'Fight!',
+    tutStepOf: 'Step {n} of {total}',
     close: 'Close',
     done: 'Done',
     remove: 'Remove',
@@ -346,6 +404,9 @@ const EN: LocaleDef = {
     hudBonus: 'Bonus: +{n}',
     hudTotalDamage: 'Total: {n} damage',
     changeLanguage: 'Change language',
+    localeTiles: '{n} tiles',
+    localeSwitchNote:
+      "Switching languages starts a fresh game with that language's tile distribution and dictionary.",
     blankTile: 'blank tile',
   },
   enemies: {
@@ -406,6 +467,7 @@ const ES: LocaleDef = {
     language: 'Idioma',
     playAgain: 'Jugar de nuevo',
     restart: 'Reiniciar',
+    retryFight: 'Repetir combate',
     nextEnemy: 'Siguiente Enemigo',
     victory: '¡VICTORIA!',
     defeated: 'DERROTADO',
@@ -431,7 +493,32 @@ const ES: LocaleDef = {
     settings: 'Ajustes',
     reduceMotion: 'Reducir movimiento',
     soundEffects: 'Efectos de sonido',
+    music: 'Música',
     haptics: 'Vibración',
+    howToPlay: 'Cómo jugar',
+    premiumDoubleLetter: 'Letra ×2',
+    premiumTripleLetter: 'Letra ×3',
+    premiumDoubleWord: 'Palabra ×2',
+    premiumTripleWord: 'Palabra ×3',
+    premiumGemForge: 'Forja de gemas — letra ×2',
+    premiumCenter: 'Empieza aquí — palabra ×2',
+    premiumVoid: 'Casilla bloqueada',
+    legendTitle: 'Casillas de poder',
+    tutSpellTitle: 'Forma una palabra',
+    tutSpellBody: 'Arrastra letras de tu atril al tablero — o simplemente tócalas — para formar una palabra.',
+    tutAttackTitle: 'Las palabras son armas',
+    tutAttackBody: 'Envía tu palabra para golpear al enemigo. Cuanto más larga sea, más fuerte golpea.',
+    tutPremiumTitle: 'Casillas de poder',
+    tutPremiumBody: 'Las casillas de colores multiplican tu daño: una sola letra o la palabra entera.',
+    tutConnectTitle: 'Conecta tus palabras',
+    tutConnectBody: 'Tu primera palabra debe cubrir la estrella. Después, cada palabra nueva tiene que tocar las letras que ya están en el tablero.',
+    tutBattleTitle: 'Gana la batalla',
+    tutBattleBody: 'El enemigo te responde con una palabra cada turno, y cambiar fichas o pasar te cuesta un turno. ¡Agota su salud antes de que se agote la tuya!',
+    tutSkip: 'Saltar',
+    tutNext: 'Siguiente',
+    tutBack: 'Atrás',
+    tutFight: '¡A luchar!',
+    tutStepOf: 'Paso {n} de {total}',
     close: 'Cerrar',
     done: 'Listo',
     remove: 'Eliminar',
@@ -521,6 +608,9 @@ const ES: LocaleDef = {
     hudBonus: 'Bonus: +{n}',
     hudTotalDamage: 'Total: {n} de daño',
     changeLanguage: 'Cambiar idioma',
+    localeTiles: '{n} fichas',
+    localeSwitchNote:
+      'Cambiar de idioma inicia una partida nueva con la distribución de fichas y el diccionario de ese idioma.',
     blankTile: 'ficha en blanco',
   },
   enemies: {
@@ -579,6 +669,7 @@ const FR: LocaleDef = {
     language: 'Langue',
     playAgain: 'Rejouer',
     restart: 'Redémarrer',
+    retryFight: 'Recommencer le combat',
     nextEnemy: 'Ennemi suivant',
     victory: 'VICTOIRE !',
     defeated: 'VAINCU',
@@ -604,7 +695,32 @@ const FR: LocaleDef = {
     settings: 'Paramètres',
     reduceMotion: 'Réduire les animations',
     soundEffects: 'Effets sonores',
+    music: 'Musique',
     haptics: 'Vibrations',
+    howToPlay: 'Comment jouer',
+    premiumDoubleLetter: 'Lettre ×2',
+    premiumTripleLetter: 'Lettre ×3',
+    premiumDoubleWord: 'Mot ×2',
+    premiumTripleWord: 'Mot ×3',
+    premiumGemForge: 'Forge de gemmes — lettre ×2',
+    premiumCenter: 'Départ — mot ×2',
+    premiumVoid: 'Case bloquée',
+    legendTitle: 'Cases de pouvoir',
+    tutSpellTitle: 'Composez un mot',
+    tutSpellBody: 'Faites glisser les lettres de votre chevalet sur le plateau — ou touchez-les simplement — pour composer un mot.',
+    tutAttackTitle: 'Les mots sont des armes',
+    tutAttackBody: 'Validez votre mot pour frapper l\'ennemi. Plus le mot est long, plus le coup est fort.',
+    tutPremiumTitle: 'Cases de pouvoir',
+    tutPremiumBody: 'Les cases colorées multiplient vos dégâts : une seule lettre, ou le mot entier.',
+    tutConnectTitle: 'Reliez vos mots',
+    tutConnectBody: 'Votre premier mot doit couvrir l\'étoile. Ensuite, chaque nouveau mot doit toucher les lettres déjà posées.',
+    tutBattleTitle: 'Gagnez le combat',
+    tutBattleBody: 'L\'ennemi vous répond par un mot à chaque tour, et échanger ou passer vous coûte un tour. Videz sa santé avant que la vôtre ne s\'épuise !',
+    tutSkip: 'Passer',
+    tutNext: 'Suivant',
+    tutBack: 'Retour',
+    tutFight: 'Au combat !',
+    tutStepOf: 'Étape {n} sur {total}',
     close: 'Fermer',
     done: 'Terminé',
     remove: 'Supprimer',
@@ -694,6 +810,9 @@ const FR: LocaleDef = {
     hudBonus: 'Bonus : +{n}',
     hudTotalDamage: 'Total : {n} dégâts',
     changeLanguage: 'Changer de langue',
+    localeTiles: '{n} jetons',
+    localeSwitchNote:
+      'Changer de langue lance une nouvelle partie avec la distribution de jetons et le dictionnaire de cette langue.',
     blankTile: 'jeton blanc',
   },
   enemies: {
@@ -755,6 +874,7 @@ const DE: LocaleDef = {
     language: 'Sprache',
     playAgain: 'Nochmal spielen',
     restart: 'Neustart',
+    retryFight: 'Kampf wiederholen',
     nextEnemy: 'Nächster Gegner',
     victory: 'SIEG!',
     defeated: 'BESIEGT',
@@ -780,7 +900,32 @@ const DE: LocaleDef = {
     settings: 'Einstellungen',
     reduceMotion: 'Bewegung reduzieren',
     soundEffects: 'Soundeffekte',
+    music: 'Musik',
     haptics: 'Vibration',
+    howToPlay: 'Spielanleitung',
+    premiumDoubleLetter: 'Buchstabe ×2',
+    premiumTripleLetter: 'Buchstabe ×3',
+    premiumDoubleWord: 'Wort ×2',
+    premiumTripleWord: 'Wort ×3',
+    premiumGemForge: 'Edelsteinschmiede — Buchstabe ×2',
+    premiumCenter: 'Startfeld — Wort ×2',
+    premiumVoid: 'Gesperrtes Feld',
+    legendTitle: 'Kraftfelder',
+    tutSpellTitle: 'Bilde ein Wort',
+    tutSpellBody: 'Zieh Buchstaben von deinem Ständer auf das Brett — oder tippe sie einfach an — um ein Wort zu bilden.',
+    tutAttackTitle: 'Wörter sind Waffen',
+    tutAttackBody: 'Bestätige dein Wort, um den Gegner zu treffen. Je länger das Wort, desto härter der Schlag.',
+    tutPremiumTitle: 'Kraftfelder',
+    tutPremiumBody: 'Farbige Felder vervielfachen deinen Schaden — entweder einen Buchstaben oder dein ganzes Wort.',
+    tutConnectTitle: 'Verbinde deine Wörter',
+    tutConnectBody: 'Dein erstes Wort muss den Stern bedecken. Danach muss jedes neue Wort die Buchstaben berühren, die schon auf dem Brett liegen.',
+    tutBattleTitle: 'Gewinne den Kampf',
+    tutBattleBody: 'Der Gegner antwortet jede Runde mit einem eigenen Wort, und Tauschen oder Passen kostet dich einen Zug. Leere seine Lebenspunkte, bevor deine aufgebraucht sind!',
+    tutSkip: 'Überspringen',
+    tutNext: 'Weiter',
+    tutBack: 'Zurück',
+    tutFight: 'Kämpfen!',
+    tutStepOf: 'Schritt {n} von {total}',
     close: 'Schließen',
     done: 'Fertig',
     remove: 'Entfernen',
@@ -870,6 +1015,9 @@ const DE: LocaleDef = {
     hudBonus: 'Bonus: +{n}',
     hudTotalDamage: 'Gesamt: {n} Schaden',
     changeLanguage: 'Sprache ändern',
+    localeTiles: '{n} Steine',
+    localeSwitchNote:
+      'Ein Sprachwechsel startet ein neues Spiel mit der Steinverteilung und dem Wörterbuch dieser Sprache.',
     blankTile: 'leerer Stein',
   },
   enemies: {
@@ -926,6 +1074,7 @@ const PT: LocaleDef = {
     language: 'Idioma',
     playAgain: 'Jogar de novo',
     restart: 'Reiniciar',
+    retryFight: 'Repetir combate',
     nextEnemy: 'Próximo Inimigo',
     victory: 'VITÓRIA!',
     defeated: 'DERROTADO',
@@ -951,7 +1100,32 @@ const PT: LocaleDef = {
     settings: 'Definições',
     reduceMotion: 'Reduzir movimento',
     soundEffects: 'Efeitos sonoros',
+    music: 'Música',
     haptics: 'Vibração',
+    howToPlay: 'Como jogar',
+    premiumDoubleLetter: 'Letra ×2',
+    premiumTripleLetter: 'Letra ×3',
+    premiumDoubleWord: 'Palavra ×2',
+    premiumTripleWord: 'Palavra ×3',
+    premiumGemForge: 'Forja de gemas — letra ×2',
+    premiumCenter: 'Começa aqui — palavra ×2',
+    premiumVoid: 'Casa bloqueada',
+    legendTitle: 'Casas de poder',
+    tutSpellTitle: 'Forma uma palavra',
+    tutSpellBody: 'Arrasta as letras do teu suporte para o tabuleiro — ou toca nelas — para formar uma palavra.',
+    tutAttackTitle: 'As palavras são armas',
+    tutAttackBody: 'Confirma a tua palavra para atacar o inimigo. Quanto mais longa a palavra, mais forte o golpe.',
+    tutPremiumTitle: 'Casas de poder',
+    tutPremiumBody: 'As casas coloridas multiplicam o teu dano — uma só letra ou a palavra inteira.',
+    tutConnectTitle: 'Liga as tuas palavras',
+    tutConnectBody: 'A tua primeira palavra tem de cobrir a estrela. Depois disso, cada palavra nova tem de tocar nas letras já colocadas.',
+    tutBattleTitle: 'Vence a batalha',
+    tutBattleBody: 'O inimigo responde com uma palavra em cada turno, e trocar peças ou passar custa-te um turno. Esgota a vida dele antes que a tua acabe!',
+    tutSkip: 'Saltar',
+    tutNext: 'Seguinte',
+    tutBack: 'Voltar',
+    tutFight: 'Lutar!',
+    tutStepOf: 'Passo {n} de {total}',
     close: 'Fechar',
     done: 'Concluído',
     remove: 'Remover',
@@ -1041,6 +1215,9 @@ const PT: LocaleDef = {
     hudBonus: 'Bónus: +{n}',
     hudTotalDamage: 'Total: {n} de dano',
     changeLanguage: 'Mudar idioma',
+    localeTiles: '{n} peças',
+    localeSwitchNote:
+      'Mudar de idioma inicia um jogo novo com a distribuição de peças e o dicionário desse idioma.',
     blankTile: 'peça em branco',
   },
   enemies: {
@@ -1094,6 +1271,7 @@ const IT: LocaleDef = {
     language: 'Lingua',
     playAgain: 'Gioca ancora',
     restart: 'Ricomincia',
+    retryFight: 'Riprova lo scontro',
     nextEnemy: 'Prossimo Nemico',
     victory: 'VITTORIA!',
     defeated: 'SCONFITTO',
@@ -1119,7 +1297,32 @@ const IT: LocaleDef = {
     settings: 'Impostazioni',
     reduceMotion: 'Riduci animazioni',
     soundEffects: 'Effetti sonori',
+    music: 'Musica',
     haptics: 'Vibrazione',
+    howToPlay: 'Come si gioca',
+    premiumDoubleLetter: 'Lettera ×2',
+    premiumTripleLetter: 'Lettera ×3',
+    premiumDoubleWord: 'Parola ×2',
+    premiumTripleWord: 'Parola ×3',
+    premiumGemForge: 'Forgia di gemme — lettera ×2',
+    premiumCenter: 'Si parte da qui — parola ×2',
+    premiumVoid: 'Casella bloccata',
+    legendTitle: 'Caselle speciali',
+    tutSpellTitle: 'Componi una parola',
+    tutSpellBody: 'Trascina le lettere dal leggio sul tabellone — o toccale semplicemente — per comporre una parola.',
+    tutAttackTitle: 'Le parole sono armi',
+    tutAttackBody: 'Conferma la parola per colpire il nemico. Più è lunga, più forte è il colpo.',
+    tutPremiumTitle: 'Caselle speciali',
+    tutPremiumBody: 'Le caselle colorate moltiplicano i tuoi danni: una sola lettera oppure l\'intera parola.',
+    tutConnectTitle: 'Collega le parole',
+    tutConnectBody: 'La prima parola deve coprire la stella. Poi ogni nuova parola deve toccare le lettere già sul tabellone.',
+    tutBattleTitle: 'Vinci lo scontro',
+    tutBattleBody: 'Il nemico ti risponde con una parola a ogni turno, e cambiare tessere o passare ti costa un turno. Azzera la sua salute prima che finisca la tua!',
+    tutSkip: 'Salta',
+    tutNext: 'Avanti',
+    tutBack: 'Indietro',
+    tutFight: 'Combatti!',
+    tutStepOf: 'Passo {n} di {total}',
     close: 'Chiudi',
     done: 'Fatto',
     remove: 'Rimuovi',
@@ -1209,6 +1412,9 @@ const IT: LocaleDef = {
     hudBonus: 'Bonus: +{n}',
     hudTotalDamage: 'Totale: {n} danni',
     changeLanguage: 'Cambia lingua',
+    localeTiles: '{n} tessere',
+    localeSwitchNote:
+      'Cambiare lingua avvia una nuova partita con la distribuzione delle tessere e il dizionario di quella lingua.',
     blankTile: 'tessera vuota',
   },
   enemies: {

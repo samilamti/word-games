@@ -56,8 +56,21 @@ export interface NpcMoveOpts {
   maxNewTiles?: number; // default 5 — rack letters spent per move
   maxWordLen?: number; // default 8 — longest candidate window
   timeBudgetMs?: number; // default 120 — wall-clock cap
-  pickRank?: number; // 0 = best; k = k-th best (difficulty word-strength lever)
+  pickRank?: number; // 0 = best; k = k-th best. Legacy lever, see pickPercentile
+  pickPercentile?: number; // 0 = best, 1 = weakest found (difficulty lever)
   alphabet?: string[]; // letters a wild may stand for; default A–Z
+}
+
+/** Index into a damage-sorted move list for a difficulty percentile.
+ *
+ *  Percentile rather than an absolute rank because the list length swings wildly
+ *  with board state: an absolute "play the 5th best move" collapses to "play the
+ *  best move" whenever the search finds fewer than five candidates — which is
+ *  precisely the opening of a game, against a beginner. */
+export function pickMoveIndex(pct: number, len: number): number {
+  if (len <= 0) return 0;
+  const clamped = Math.min(1, Math.max(0, pct));
+  return Math.min(len - 1, Math.max(0, Math.round(clamped * (len - 1))));
 }
 
 interface RecordedMove extends NpcMove {
@@ -156,7 +169,10 @@ export function findBestNpcMove(
 
   if (moves.length === 0) return null;
   moves.sort((a, b) => b.totalDamage - a.totalDamage);
-  const idx = Math.min(Math.max(0, pickRank), moves.length - 1);
+  const idx =
+    opts.pickPercentile !== undefined
+      ? pickMoveIndex(opts.pickPercentile, moves.length)
+      : Math.min(Math.max(0, pickRank), moves.length - 1);
   const chosen = moves[idx];
   return {
     placedTiles: chosen.placedTiles,

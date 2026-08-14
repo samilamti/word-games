@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useGameStore } from '../store/gameStore.ts';
 import { DisputeDialog } from './DisputeDialog.tsx';
 import { triggerHaptic } from '../native/init.ts';
+import { soundManager } from '../audio/SoundManager.ts';
 import { useUI } from '../i18n/useUI.ts';
 
 export function ActionBar() {
@@ -24,6 +25,7 @@ export function ActionBar() {
     triggerHaptic();
     const result = submitWord();
     if (!result.success && result.error) {
+      soundManager.play('wordRejected');
       setMessage(result.error);
     }
   }, [submitWord, setMessage]);
@@ -35,6 +37,7 @@ export function ActionBar() {
 
   const handleConfirmExchange = useCallback(() => {
     triggerHaptic();
+    soundManager.play('exchange');
     const tiles = rack.filter(t => selectedForSwap.includes(t.id));
     swapTiles(tiles);
     clearSwapSelection();
@@ -42,6 +45,7 @@ export function ActionBar() {
 
   const handlePass = useCallback(() => {
     triggerHaptic();
+    soundManager.play('exchange');
     swapTiles([]);
     clearSwapSelection();
   }, [swapTiles, clearSwapSelection]);

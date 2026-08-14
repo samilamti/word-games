@@ -81,6 +81,17 @@ button:active:not(:disabled) {
   100% { opacity: 0; transform: translate(-50%, -8px); }
 }
 
+/* Premium-square hint (PremiumHintToast): a brief pill naming the multiplier a
+   just-placed tile landed on, so the board teaches its own notation during play.
+   Opacity-only, so it needs no reduce-motion guard. Remounts per placement via
+   key={row,col}; the component unmounts itself on animationend. */
+@keyframes premiumHint {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Enemy tile-drop "3D" tumble: each freshly-placed NPC tile falls from above
    the board, pitching forward (rotateX) under the board's perspective, and
    settles flat with a back-eased bounce. Staggered in reading order via

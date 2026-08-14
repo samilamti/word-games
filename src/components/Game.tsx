@@ -14,6 +14,9 @@ import { SettingsButton } from './SettingsButton.tsx';
 import { EnemyAppearToast } from './EnemyAppearToast.tsx';
 import { DefinitionToast } from './DefinitionToast.tsx';
 import { JournalButton } from './JournalButton.tsx';
+import { HelpButton } from './HelpButton.tsx';
+import { TutorialModal } from './TutorialModal.tsx';
+import { PremiumHintToast } from './PremiumHintToast.tsx';
 import { Paywall } from './Paywall.tsx';
 import { requireUnlock } from '../store/entitlementStore.ts';
 import { ENEMY_CATALOG } from '../types/enemies.ts';
@@ -31,7 +34,7 @@ const DROP_STAGGER_MS = 45;
 const REDUCED_MOTION_DROP_MS = 120;
 
 // Free campaign length — enemies 0 and 1 are free; advancing to the 3rd needs
-// the one-time unlock (M3). Gating is preview-gated by the dev flag for now.
+// the one-time unlock (M3).
 const FREE_ENEMY_COUNT = 2;
 
 // After the slowed final death animation finishes, hold this beat before the
@@ -66,7 +69,18 @@ export function Game() {
   const drawTiles = useGameStore(s => s.drawTiles);
   const setDictionaryLoaded = useGameStore(s => s.setDictionaryLoaded);
   const finaleAnimationDone = useGameStore(s => s.finaleAnimationDone);
+  const replayEnemySpawnToast = useGameStore(s => s.replayEnemySpawnToast);
+  // Fractions rather than raw HP: selecting on the ratio means the music effect
+  // re-runs only when the danger threshold could actually have moved.
+  const enemyHpPct = useGameStore(s => (s.enemy ? s.enemy.hp / s.enemy.maxHp : 1));
+  const playerHpPct = useGameStore(s => s.playerHp / s.playerMaxHp);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
+  const tutorialSeen = useSettingsStore(s => s.tutorialSeen);
+  const tutorialOpen = useSettingsStore(s => s.tutorialOpen);
+  const openTutorial = useSettingsStore(s => s.openTutorial);
+  // True only for the guide that opened itself on a first run, so the spawn
+  // toast is replayed for newcomers but not every time someone reopens the help.
+  const autoTutorialRef = useRef(false);
   const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
   const boardWrapperRef = useRef<HTMLDivElement>(null); // shake target (board + Pixi)
   // Gates the victory/defeat modal: held back until the slowed final death
@@ -87,6 +101,40 @@ export function Game() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale]);
+
+  // First run: open the intro guide straight away, during the loading phase.
+  // It covers the dictionary fetch, so newcomers read the rules in time that was
+  // dead anyway, and the board is ready the moment they dismiss it.
+  useEffect(() => {
+    if (tutorialSeen) return;
+    autoTutorialRef.current = true;
+    openTutorial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The spawn toast is a short CSS animation that would expire unseen behind the
+  // guide, so replay it once the first-run guide closes.
+  useEffect(() => {
+    if (tutorialOpen || !autoTutorialRef.current) return;
+    autoTutorialRef.current = false;
+    replayEnemySpawnToast();
+  }, [tutorialOpen, replayEnemySpawnToast]);
+
+  // Unlock audio on the first real user gesture anywhere. Combat sounds fire
+  // from timeout chains, which browsers do not accept as gestures, so the
+  // unlock has to be hung off a genuine interaction rather than the first play().
+  useEffect(() => {
+    const unlock = () => soundManager.unlockFromGesture();
+    document.addEventListener('pointerdown', unlock, { once: true });
+    return () => document.removeEventListener('pointerdown', unlock);
+  }, []);
+
+  // Lift the music when either fighter is nearly down, so the last stretch of a
+  // close fight sounds different from its opening.
+  useEffect(() => {
+    const danger = enemyHpPct < 0.3 || playerHpPct < 0.3;
+    soundManager.setMusicIntensity(danger ? 1 : 0);
+  }, [enemyHpPct, playerHpPct]);
 
   // Record the run to the leaderboard when the player wins. We dedupe by
   // enemyAppearAt timestamp so a single victory only emits one entry even
@@ -200,6 +248,14 @@ export function Game() {
     initGame(0);
   }, [initGame]);
 
+  // Losing used to throw the player back to the first enemy, which turns one bad
+  // fight into a re-run of every fight before it. Retrying the current enemy
+  // records nothing (recordRun only fires on victory) and never advances
+  // enemyIndex, so the paywall and leaderboard are untouched.
+  const handleRetryFight = useCallback(() => {
+    initGame(enemyIndex);
+  }, [initGame, enemyIndex]);
+
   const handleNext = useCallback(() => {
     // Advancing past the free campaign (to enemy index >= FREE_ENEMY_COUNT)
     // requires the unlock; requireUnlock opens the paywall and returns false.
@@ -251,6 +307,7 @@ export function Game() {
           <div ref={boardWrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
             <GameBoard />
             <BattleOverlay />
+            <PremiumHintToast />
           </div>
           <ActionBar />
           <TileRack />
@@ -321,13 +378,33 @@ export function Game() {
                   {ui.nextEnemy}
                 </button>
               )}
+              {phase === 'defeat' && (
+                <button
+                  onClick={handleRetryFight}
+                  style={{
+                    padding: '12px 28px',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    backgroundColor: '#ff9800',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ui.retryFight}
+                </button>
+              )}
               <button
                 onClick={handleRestart}
                 style={{
                   padding: '12px 28px',
                   fontSize: 18,
                   fontWeight: 'bold',
-                  backgroundColor: phase === 'victory' && !isFinalEnemy ? '#3a3a5c' : '#ff9800',
+                  backgroundColor:
+                    phase === 'defeat' || (phase === 'victory' && !isFinalEnemy)
+                      ? '#3a3a5c'
+                      : '#ff9800',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 8,
@@ -346,9 +423,11 @@ export function Game() {
       <FeedbackButton />
       <LeaderboardButton />
       <JournalButton />
+      <HelpButton />
       <LanguagePicker />
       <SettingsButton />
       <Paywall />
+      <TutorialModal />
     </div>
   );
 }
