@@ -82,6 +82,7 @@ export function Game() {
   // True only for the guide that opened itself on a first run, so the spawn
   // toast is replayed for newcomers but not every time someone reopens the help.
   const autoTutorialRef = useRef(false);
+  const tutorialWasOpenRef = useRef(false);
   const recordedRunRef = useRef<number>(0); // dedupe recordRun across re-renders
   const boardWrapperRef = useRef<HTMLDivElement>(null); // shake target (board + Pixi)
   // Gates the victory/defeat modal: held back until the slowed final death
@@ -115,8 +116,19 @@ export function Game() {
 
   // The spawn toast is a short CSS animation that would expire unseen behind the
   // guide, so replay it once the first-run guide closes.
+  //
+  // This has to wait for a real open→close transition. Keying off the "was this
+  // the auto-run" flag alone fires on mount instead: the effect above sets that
+  // flag synchronously, while the open state it requests only lands on the next
+  // render, so this effect's first pass sees "armed but closed" and replays
+  // immediately — disarming itself before the player has read a word.
   useEffect(() => {
-    if (tutorialOpen || !autoTutorialRef.current) return;
+    if (tutorialOpen) {
+      tutorialWasOpenRef.current = true;
+      return;
+    }
+    if (!tutorialWasOpenRef.current || !autoTutorialRef.current) return;
+    tutorialWasOpenRef.current = false;
     autoTutorialRef.current = false;
     replayEnemySpawnToast();
   }, [tutorialOpen, replayEnemySpawnToast]);
