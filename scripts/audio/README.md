@@ -43,7 +43,8 @@ scripts/art/.venv-art/bin/pip install soundfile torchsde
 # 3. Trim, loop and encode it.
 scripts/audio/make_loop.sh resources/audio/raw/music-s3.wav
 
-# 4. Check the seam by ear before shipping.
+# 4. Check it before shipping — by measurement, then by ear.
+scripts/audio/verify-loop.sh
 ffplay -loop 2 -autoexit public/audio/music-main.m4a
 ```
 
@@ -56,6 +57,13 @@ ffplay -loop 2 -autoexit public/audio/music-main.m4a
   work on iOS.
 - **Looping is done with an AudioBufferSourceNode**, not `<audio loop>`: the media
   element inserts an audible gap at the loop point on several platforms.
+- **`verify-loop.sh` answers "does it loop?" without listening.** The obvious
+  test — comparing the level of the first and last fraction of a second — is
+  wrong: in a crossfaded loop those are adjacent slices of the source and differ
+  for musical reasons. What matters is waveform continuity across the join, so it
+  concatenates the loop with itself and compares the jump there against nearby
+  peaks. Thresholds are calibrated on real good/bad files, and the check is
+  tested against a hard cut and against silence.
 - **The seam is the whole job.** A generated clip fades in from silence and stops
   wherever the model stopped; on repeat that ticks. `make_loop.sh` strips the
   silence and crossfades the tail back over the head.
