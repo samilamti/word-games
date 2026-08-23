@@ -12,6 +12,15 @@ Two modes, because the two surfaces want opposite things:
                      taken from the original render afterwards (compose.mjs),
                      which is also why no background remover is needed.
 
+                     Strength defaults to 0.9, far higher than img2img usually
+                     wants. Measured on the probe ladder: 0.4-0.6 returns the
+                     Blender render essentially untouched — a smooth synthetic
+                     surface gives the sampler nothing to push against — and
+                     only past 0.75 does it actually repaint. The usual reason
+                     to stay low is protecting the composition, and here that
+                     job belongs to the mask instead, so the strength is free
+                     to go where the painting is.
+
   --mode portrait    plain txt2img for the large surfaces (arrival toast,
                      victory/defeat cards), where painterly detail is actually
                      visible and there is no silhouette to preserve.
@@ -121,7 +130,7 @@ def generate(pipe, mode: str, name: str, seed: int, strength: float) -> str:
         negative = NEGATIVE
         out_dir, tag = RAW_SPRITES, f"{name}-s{seed}-d{strength}"
 
-    assert_within_clip_budget(pipe, name, prompt)
+    assert_within_clip_budget(pipe, name, prompt, negative)
 
     gen = torch.Generator("cpu").manual_seed(seed)
     t0 = time.time()
@@ -153,7 +162,7 @@ def main():
     ap.add_argument("--probe", action="store_true",
                     help="cheap first pass: locks STYLE wording and img2img strength")
     ap.add_argument("--seeds", default="7,11,23")
-    ap.add_argument("--strength", type=float, default=0.5,
+    ap.add_argument("--strength", type=float, default=0.9,
                     help="img2img denoise. Lower keeps more of the Blender render")
     args = ap.parse_args()
 
@@ -164,8 +173,12 @@ def main():
         for name in PROBE:
             generate(pipe_p, "portrait", name, 7, args.strength)
         del pipe_p
+        # Release the first pipeline's weights before loading the second. MPS
+        # holds freed blocks in its caching allocator, so two ~7 GB pipelines
+        # can otherwise be resident at once for no reason.
+        torch.mps.empty_cache()
         pipe_i = load("paintover")
-        for strength in (0.4, 0.5, 0.6):
+        for strength in (0.6, 0.75, 0.9):
             generate(pipe_i, "paintover", "goblin", 7, strength)
         return
 

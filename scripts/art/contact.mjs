@@ -63,13 +63,18 @@ async function maskedSprite(rawPath, name, size) {
   const master = join(BLENDER_DIR, `${name}.png`);
   if (!existsSync(master)) return sharp(rawPath).resize(size, size, { fit: 'fill' }).png().toBuffer();
 
-  const meta = await sharp(master).metadata();
-  // toColourspace('b-w') keeps this a single channel; see compose.mjs.
+  // Same two sharp traps as compose.mjs: extractChannel yields three channels
+  // unless forced to b-w, and a resize in the same pipeline as joinChannel is
+  // applied to the base only — leaving a full-size image that will not
+  // composite into the sheet. Size both inputs first, join as raw buffers.
   const alpha = await sharp(master).ensureAlpha().extractChannel('alpha')
-    .toColourspace('b-w').blur(1).linear(3, -2 * 255).blur(0.6).toBuffer();
-  const painted = await sharp(rawPath).resize(meta.width, meta.height, { fit: 'fill' })
-    .removeAlpha().toBuffer();
-  return sharp(painted).joinChannel(alpha).resize(size, size, { fit: 'fill' }).png().toBuffer();
+    .toColourspace('b-w').resize(size, size, { fit: 'fill' })
+    .blur(1).linear(3, -2 * 255).blur(0.6).raw().toBuffer();
+  const painted = await sharp(rawPath).resize(size, size, { fit: 'fill' })
+    .removeAlpha().raw().toBuffer();
+  return sharp(painted, { raw: { width: size, height: size, channels: 3 } })
+    .joinChannel(alpha, { raw: { width: size, height: size, channels: 1 } })
+    .png().toBuffer();
 }
 
 async function spriteSheet() {

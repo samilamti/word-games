@@ -29,19 +29,27 @@ STYLE = (
     "body, bold silhouette, warm rim light, rich colour, storybook, charming"
 )
 
+# Kept under the 77-token cap deliberately. CLIP truncates the NEGATIVE exactly
+# as it truncates the positive, and that truncation is invisible: an over-budget
+# positive renders the wrong picture and announces itself, while an over-budget
+# negative just quietly stops protecting. Every entry below earns its tokens —
+# the trims were duplicates ("ornate border" restates "border", "words" restates
+# "letters"), not protections.
 NEGATIVE = (
-    "text, letters, words, watermark, signature, logo, "
-    "border, frame, vignette, ornate border, "
+    "text, letters, watermark, signature, "
+    "border, frame, vignette, "
     "photograph, photorealistic, realistic proportions, "
     "blurry, low detail, flat vector, clip art, "
     "deformed hands, extra fingers, extra limbs, "
-    "gore, blood, horror, scary, grim, "
-    "branch, twig, perch, leaves, background scenery, cluttered"
+    "gore, blood, horror, "
+    "cluttered background"
 )
 
 # Extra negative for the txt2img portraits: they must sit on a clean ground so
 # the app can frame them, and SDXL will invent a scene if not told otherwise.
-PORTRAIT_NEGATIVE = NEGATIVE + ", busy background, landscape, scenery, multiple characters"
+# This suffix is the part a truncated negative loses first, which is why the
+# base above has room for it.
+PORTRAIT_NEGATIVE = NEGATIVE + ", landscape, scenery, multiple characters"
 
 # ── img2img paint-over (combat sprites) ──────────────────────────────────────
 # Kept deliberately short: the Blender render already fixes pose, framing and
@@ -120,13 +128,23 @@ def token_count(pipe, prompt: str) -> int:
     return max(0, len(ids) - 2)
 
 
-def assert_within_clip_budget(pipe, name: str, prompt: str) -> None:
+def assert_within_clip_budget(pipe, name: str, prompt: str, negative: str = "") -> None:
     """CLIP silently truncates past 77 tokens, and it truncates from the TAIL —
     where the specific instructions live. A prompt over budget is a bug, not a
-    warning, so fail loudly rather than render something subtly wrong."""
-    n = token_count(pipe, prompt)
-    if n > 75:
-        raise SystemExit(
-            f"prompt '{name}' is {n} CLIP tokens (limit 75 + 2 sentinels).\n"
-            f"CLIP would drop the tail silently. Shorten it.\n  {prompt}"
-        )
+    warning, so fail loudly rather than render something subtly wrong.
+
+    Checks the NEGATIVE too. That is the one that gets forgotten, and its
+    truncation is the more dangerous of the two: an over-budget positive renders
+    a visibly wrong picture, while an over-budget negative simply stops
+    protecting against whatever sat at its tail, and nothing ever looks broken.
+    """
+    for label, text in (("prompt", prompt), ("negative", negative)):
+        if not text:
+            continue
+        n = token_count(pipe, text)
+        if n > 75:
+            raise SystemExit(
+                f"{label} for '{name}' is {n} CLIP tokens (limit 75 + 2 "
+                f"sentinels).\nCLIP would drop the tail silently. Shorten it.\n"
+                f"  {text}"
+            )
