@@ -83,6 +83,7 @@ STEPS = 150
 def fetch():
     """Download the gated weights. Needs network and a token."""
     from huggingface_hub import snapshot_download
+    from huggingface_hub.errors import GatedRepoError
 
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     if not token:
@@ -95,7 +96,25 @@ def fetch():
             "scripts/audio/gen_music.py --fetch"
         )
     print(f"downloading {MODEL} (~5 GB) …", flush=True)
-    path = snapshot_download(MODEL, token=token)
+    try:
+        path = snapshot_download(MODEL, token=token)
+    except GatedRepoError:
+        # A 403 here means the request was authenticated and then refused: the
+        # ACCOUNT is not on the repo's authorized list. A bad token gives 401
+        # instead, so this is never fixed by minting a new one — which is the
+        # wrong turn the raw traceback invites.
+        raise SystemExit(
+            f"Access to {MODEL} is gated and this account is not authorized.\n"
+            f"The token worked; the repo refused it. Two things to check:\n"
+            f"  1. Open https://huggingface.co/{MODEL} while signed in and\n"
+            f"     complete the access form (the 'Agree and access repository'\n"
+            f"     button). Approval is usually instant but is per-account.\n"
+            f"  2. If the token is fine-grained, it needs the\n"
+            f"     'Read access to contents of all public gated repos you can\n"
+            f"     access' permission — a plain read token does not include it.\n"
+            f"\nNo music is not a blocker: MusicBed logs one warning and the\n"
+            f"game runs silent, and the procedural bed is the designed fallback."
+        )
     print(f"  ✓ {path}")
 
 
