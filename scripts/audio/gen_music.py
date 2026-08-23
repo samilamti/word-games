@@ -19,12 +19,16 @@ LICENCE — read before shipping anything this produces:
 The download needs network, so the first run must be in the foreground.
 Generation itself is offline and safe to background.
 
-Usage:
-    # once, with network + HF_TOKEN set:
-    scripts/art/.venv-art/bin/python scripts/audio/gen_music.py --fetch
+Run it with the art venv's interpreter, not a bare `python` — see require_venv.
 
-    scripts/audio/gen_music.py --seeds 1,2,3            # candidates
-    scripts/audio/gen_music.py --prompt "…" --seeds 4   # try a different brief
+Usage:
+    PY=scripts/art/.venv-art/bin/python
+
+    # once, with network + HF_TOKEN set:
+    HF_TOKEN=hf_… $PY scripts/audio/gen_music.py --fetch
+
+    $PY scripts/audio/gen_music.py --seeds 1,2,3           # candidates
+    $PY scripts/audio/gen_music.py --prompt "…" --seeds 4  # a different brief
 """
 import argparse
 import os
@@ -32,6 +36,30 @@ import sys
 import time
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+VENV_PY = os.path.join(REPO, "scripts", "art", ".venv-art", "bin", "python")
+
+
+def require_venv():
+    """Refuse to run under the wrong interpreter.
+
+    The shebang is `/usr/bin/env python`, so invoking this file directly picks up
+    whatever `python` happens to be first on PATH — on this machine, Anaconda.
+    The failure that produces is a bare ModuleNotFoundError for a dependency the
+    project does in fact have installed, which sends you looking in the wrong
+    place entirely. Fail with the command that works instead.
+    """
+    if os.path.realpath(sys.prefix) == os.path.realpath(
+        os.path.join(REPO, "scripts", "art", ".venv-art")
+    ):
+        return
+    raise SystemExit(
+        f"This needs the art venv, not {sys.executable}.\n"
+        f"Re-run as:\n"
+        f"  {os.path.relpath(VENV_PY, REPO)} {os.path.relpath(__file__, REPO)} "
+        f"{' '.join(sys.argv[1:])}"
+    )
+
+
 OUT_DIR = os.path.join(REPO, "resources", "audio", "raw")
 MODEL = "stabilityai/stable-audio-open-1.0"
 
@@ -62,7 +90,9 @@ def fetch():
             "HF_TOKEN is not set.\n"
             f"1. Accept the licence at https://huggingface.co/{MODEL}\n"
             "2. Create a read token at https://huggingface.co/settings/tokens\n"
-            "3. Re-run with:  HF_TOKEN=hf_… scripts/audio/gen_music.py --fetch"
+            "3. Re-run with:\n"
+            "     HF_TOKEN=hf_… scripts/art/.venv-art/bin/python "
+            "scripts/audio/gen_music.py --fetch"
         )
     print(f"downloading {MODEL} (~5 GB) …", flush=True)
     path = snapshot_download(MODEL, token=token)
@@ -77,6 +107,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=SECONDS)
     ap.add_argument("--steps", type=int, default=STEPS)
     args = ap.parse_args()
+
+    require_venv()
 
     if args.fetch:
         fetch()
