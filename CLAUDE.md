@@ -7,8 +7,8 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - Vite 7 + React 19 + TypeScript 5.9 + Zustand 5
 - PixiJS 8 for combat overlay (characters, HP bars, damage numbers)
 - Capacitor 8 (Swift Package Manager) for iOS native shell
-- Blender 5 for procedural enemy renders (run via `--background --python`)
-- Web Audio API for procedural sound effects
+- Blender 5 for the character base models (run via `--background --python`), repainted with local SDXL
+- Web Audio API for procedural sound effects; a generated AAC loop for the music bed
 - Custom App Store Connect REST API client in `scripts/asc/` (ES256 JWT, Node 24 `--env-file`)
 - Web3Forms transport for beta feedback (set `VITE_WEB3FORMS_KEY` to enable; empty = localStorage only)
 
@@ -32,12 +32,12 @@ Multi-language tile-based word combat game shipping to iOS App Store (TestFlight
 - `src/engine/` — Pure logic: `BoardState`, `WordValidator` (Set-based, locale-aware), `ScoreCalculator`, `TileBag` (takes a `LocaleDef`)
 - `src/store/gameStore.ts` — Zustand store: game state, run stats, current locale, Game Center alias, enemy progression. Enemy attacks are deferred via `pendingEnemyTurn` so the tile-drop juice plays before damage lands (`resolveEnemyAttack`)
 - `src/store/settingsStore.ts` — Zustand store for accessibility/feel toggles (`reduceMotion` / `soundEnabled` / `musicEnabled` / `hapticsEnabled`) plus tutorial state (`tutorialSeen` persisted, `tutorialOpen` volatile), persisted to `lexica_knights_settings`; read by `SoundManager` mute/music + `triggerHaptic`/`triggerRumble` + the tile-drop controller
-- `src/components/` — React UI including `LanguagePicker`, `LeaderboardButton`, `LeaderboardModal`, `EnemyAppearToast`, `SettingsButton` (gear → sound/vibration/reduce-motion)
+- `src/components/` — React UI including `LanguagePicker`, `LeaderboardButton`, `LeaderboardModal`, `EnemyAppearToast`, `SettingsButton` (gear → music/sound/vibration/reduce-motion + How to play), `PremiumMarker`/`BoardLegend`/`PremiumHintToast`, `TutorialModal`, `HelpButton`
 - `src/combat/BattleOverlay.tsx` — PixiJS app with `CharacterController`, `HpBar`, `DamageNumberManager`, ResizeObserver-driven responsive canvas
 - `src/leaderboard/leaderboard.ts` — Local per-device run records
 - `src/native/init.ts` — StatusBar / SplashScreen / Game Center auth / Haptics
 - `ios/App/App/GameCenterPlugin.swift` — Custom CAPBridgedPlugin wrapping `GKLocalPlayer.authenticateHandler`
-- `public/enemies/*.png` — Blender-rendered chibi sprites (1024×1024, transparent BG)
+- `public/enemies/*.png` — the 5 enemies + hero as painted sprites (512×512 RGBA, ~1.4 MB total). Blender masters stay at `resources/enemies/` in 1024px and are the alpha source for every repaint, so they are never overwritten. `public/art/portraits/*.webp` — 512² busts for the arrival toast and win/loss cards
 - `public/dictionaries/*.txt` — 6 word lists, 3.3M words total (native bundle ships only `en`+`pt`; others fetched on demand from the CDN). `public/definitions/<locale>/<bucket>.json` — bucketed defs, 346 MB total, same Option B delivery (en+pt bundled ~58 MB, rest via `VITE_DEFS_CDN_BASE`); gitignored/durable-local
 - `scripts/asc/` — App Store Connect API automation (bundle ID, app metadata, age rating, build attach, encryption, screenshots)
 - `scripts/blender/render_enemies.py` — Procedural Blender script for the 5 enemies **and the hero** (one camera + light rig for the whole cast). `scripts/blender/check_attachment.py` flood-fills the parts in world space and fails if any float loose — run it after touching a builder, don't eyeball it
