@@ -31,6 +31,7 @@ Usage:
     $PY scripts/audio/gen_music.py --prompt "…" --seeds 4  # a different brief
 """
 import argparse
+import glob
 import os
 import sys
 import time
@@ -79,6 +80,26 @@ NEGATIVE = "harsh, distorted, noisy, applause, speech, spoken word, sudden silen
 SECONDS = 40
 STEPS = 150
 
+# Only the diffusers-format files. The repo also ships Stability's original
+# checkpoints — model.safetensors (4.5 GB) and vae_model.ckpt (602 MB) — which
+# StableAudioPipeline never reads, plus a dataset CSV and a banner image.
+# Fetching everything is 15.7 GB for a ~5 GB model, and every extra gigabyte is
+# another chance for the transfer to drop.
+ALLOW_PATTERNS = [
+    "model_index.json",
+    "scheduler/*",
+    "text_encoder/*",
+    "tokenizer/*",
+    "transformer/*",
+    "vae/*",
+    "projection_model/*",
+]
+
+# Hugging Face's Xet backend is fast but drops long transfers with an opaque
+# "CAS Client Error". Retrying is usually enough — snapshot_download resumes
+# from what is already cached — and the last attempt falls back to plain HTTP.
+FETCH_ATTEMPTS = 4
+
 
 def fetch():
     """Download the gated weights. Needs network and a token."""
@@ -95,9 +116,30 @@ def fetch():
             "     HF_TOKEN=hf_… scripts/art/.venv-art/bin/python "
             "scripts/audio/gen_music.py --fetch"
         )
-    print(f"downloading {MODEL} (~5 GB) …", flush=True)
+    print(f"downloading {MODEL} (~5 GB, diffusers files only) …", flush=True)
     try:
-        path = snapshot_download(MODEL, token=token)
+        for attempt in range(1, FETCH_ATTEMPTS + 1):
+            # Last resort: turn Xet off entirely. Slower, but it is plain HTTP
+            # with ordinary resume rather than content-addressed reconstruction.
+            if attempt == FETCH_ATTEMPTS:
+                os.environ["HF_HUB_DISABLE_XET"] = "1"
+                print("  retrying with Xet disabled …", flush=True)
+            try:
+                path = snapshot_download(
+                    MODEL, token=token, allow_patterns=ALLOW_PATTERNS
+                )
+                break
+            except GatedRepoError:
+                raise
+            except Exception as err:  # transport-layer failure
+                if attempt == FETCH_ATTEMPTS:
+                    raise SystemExit(
+                        f"download failed after {FETCH_ATTEMPTS} attempts: {err}\n"
+                        "Already-fetched files are cached, so re-running resumes "
+                        "rather than starting over."
+                    )
+                print(f"  attempt {attempt} failed ({type(err).__name__}); "
+                      f"resuming …", flush=True)
     except GatedRepoError:
         # A 403 here means the request was authenticated and then refused: the
         # ACCOUNT is not on the repo's authorized list. A bad token gives 401
@@ -116,6 +158,24 @@ def fetch():
             f"game runs silent, and the procedural bed is the designed fallback."
         )
     print(f"  ✓ {path}")
+
+
+def snapshot_dir() -> str:
+    """Local path of the downloaded snapshot.
+
+    The pipeline is loaded by directory rather than by hub id, because the cache
+    is deliberately partial — allow_patterns skips Stability's original-format
+    checkpoints. Resolving by id makes the hub notice those absences and either
+    re-download the 5 GB we skipped or refuse outright; loading by path is plain
+    filesystem work with no opinion about what else the repo contains.
+    """
+    home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+    hits = sorted(glob.glob(os.path.join(
+        home, "hub", "models--stabilityai--stable-audio-open-1.0", "snapshots", "*",
+    )))
+    if not hits:
+        raise SystemExit("weights not downloaded yet — run --fetch first")
+    return hits[-1]
 
 
 def main():
@@ -137,13 +197,17 @@ def main():
     import soundfile as sf
     from diffusers import StableAudioPipeline
 
-    print(f"loading {MODEL} …", flush=True)
+    snap = snapshot_dir()
+    print(f"loading {MODEL} from {snap} …", flush=True)
     try:
-        pipe = StableAudioPipeline.from_pretrained(MODEL, torch_dtype=torch.float16)
+        pipe = StableAudioPipeline.from_pretrained(
+            snap, torch_dtype=torch.float16, local_files_only=True
+        )
     except OSError as err:
         raise SystemExit(
             f"could not load {MODEL}: {err}\n"
-            "If this is an access error, the weights are gated — run --fetch first."
+            "The cached snapshot looks incomplete — re-run --fetch, which "
+            "resumes from what is already there."
         )
     pipe = pipe.to("mps")
 
