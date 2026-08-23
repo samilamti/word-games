@@ -33,7 +33,7 @@ offline by id.
 Usage:
     scripts/art/.venv-art/bin/python scripts/art/gen.py --probe
     scripts/art/.venv-art/bin/python scripts/art/gen.py --mode portrait goblin --seeds 7,11
-    scripts/art/.venv-art/bin/python scripts/art/gen.py --mode paintover --all --strength 0.5
+    scripts/art/.venv-art/bin/python scripts/art/gen.py --mode paintover --all --strength 0.9
 """
 import argparse
 import glob

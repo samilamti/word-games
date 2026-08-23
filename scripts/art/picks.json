@@ -1,5 +1,21 @@
 {
-  "//": "Chosen candidate per asset, recorded so the whole set can be rebuilt with `compose.mjs --all`. Paths are repo-relative and point at raw generator output, which is gitignored — re-running gen.py with the same seed reproduces them exactly.",
-  "sprites": {},
-  "portraits": {}
+  "//": "Chosen candidate per asset, recorded so the whole set can be rebuilt with `compose.mjs --all`. Paths are repo-relative and point at raw generator output, which is gitignored — re-running gen.py with the same seed and strength reproduces them exactly.",
+  "//sprites": "Judged at 86px on the contact sheet, which is the size the combat overlay actually draws. Chosen for silhouette and weapon readability at that size, not for detail. troll-s7 and undead-s11 were rejected for stray blobs outside the figure where the painting overran its mask.",
+  "sprites": {
+    "goblin": "resources/art/raw/sprites/goblin-s23-d0.9.png",
+    "hero": "resources/art/raw/sprites/hero-s7-d0.9.png",
+    "orc": "resources/art/raw/sprites/orc-s23-d0.9.png",
+    "troll": "resources/art/raw/sprites/troll-s23-d0.9.png",
+    "undead": "resources/art/raw/sprites/undead-s23-d0.9.png",
+    "wraith": "resources/art/raw/sprites/wraith-s7-d0.9.png"
+  },
+  "//portraits": "Dark grounds preferred: these sit in a near-black panel, so a cream background reads as a lit square. Otherwise chosen for the detail that names the character — the Ink Goblin's book and quill, the undead's glowing tome, the wraith's empty hood.",
+  "portraits": {
+    "goblin": "resources/art/raw/portraits/goblin-s11.png",
+    "hero": "resources/art/raw/portraits/hero-s11.png",
+    "orc": "resources/art/raw/portraits/orc-s7.png",
+    "troll": "resources/art/raw/portraits/troll-s7.png",
+    "undead": "resources/art/raw/portraits/undead-s11.png",
+    "wraith": "resources/art/raw/portraits/wraith-s11.png"
+  }
 }
