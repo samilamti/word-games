@@ -160,6 +160,45 @@ def fetch():
     print(f"  ✓ {path}")
 
 
+def patch_brownian_bounds():
+    """Widen the SDE noise sampler's interval to cover the sigmas it is asked for.
+
+    CosineDPMSolverMultistepScheduler builds its BrownianTreeNoiseSampler from
+    the CONFIG bounds (sigma_min 0.3, sigma_max 500) but queries it with the
+    ACTUAL schedule, which runs from a literal 0.0 — final_sigmas_type is
+    "zero" — up to 500.00006 after the cosine schedule is computed in fp32. Both
+    ends therefore fall outside the tree's own interval.
+
+    torchsde only warns about the high end, but a query below t0 sends _split
+    bisecting toward a point it can never bracket, and the run dies with a
+    RecursionError on the last step — after every one of the 150 steps has been
+    paid for.
+
+    The tree is happy with a wider interval; nothing else about the schedule
+    changes, and a given seed still reproduces exactly. Skipped when the
+    scheduler supplies a non-identity transform (a log transform maps 0 to
+    infinity), which no Stable Audio path does.
+    """
+    import torch
+    from diffusers.schedulers import scheduling_dpmsolver_sde as sde
+
+    cls = sde.BrownianTreeNoiseSampler
+    if getattr(cls, "_lexica_widened", False):
+        return
+    original_init = cls.__init__
+
+    def widened_init(self, x, sigma_min, sigma_max, seed=None, transform=lambda v: v):
+        lo, hi = sorted((float(sigma_min), float(sigma_max)))
+        mapped_zero = float(transform(torch.as_tensor(0.0)))
+        if mapped_zero == mapped_zero and abs(mapped_zero) != float("inf"):
+            lo = 0.0
+        hi += max((hi - lo) * 1e-3, 1e-3)
+        original_init(self, x, lo, hi, seed=seed, transform=transform)
+
+    cls.__init__ = widened_init
+    cls._lexica_widened = True
+
+
 def snapshot_dir() -> str:
     """Local path of the downloaded snapshot.
 
@@ -196,6 +235,8 @@ def main():
     import torch
     import soundfile as sf
     from diffusers import StableAudioPipeline
+
+    patch_brownian_bounds()
 
     snap = snapshot_dir()
     print(f"loading {MODEL} from {snap} …", flush=True)

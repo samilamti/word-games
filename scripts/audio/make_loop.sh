@@ -47,7 +47,14 @@ ffmpeg -v error -y -i "$WORK/head.wav" -i "$WORK/tail.wav" \
 
 # 128k AAC in an .m4a container: transparent enough for a background bed and
 # roughly a megabyte a minute.
-ffmpeg -v error -y -i "$WORK/looped.wav" -c:a aac -b:a 128k -movflags +faststart "$OUT"
+#
+# The peak limiter is not cosmetic: generated clips come back touching 0 dBFS,
+# and a lossy encoder reconstructs a waveform that overshoots its input, so a
+# full-scale source clips on decode. -1 dB of headroom costs nothing audible on
+# a bed that plays at a fraction of the mix anyway.
+ffmpeg -v error -y -i "$WORK/looped.wav" \
+  -af "alimiter=limit=0.89:level=disabled" \
+  -c:a aac -b:a 128k -movflags +faststart "$OUT"
 
 FINAL_DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT")
 SIZE=$(du -h "$OUT" | cut -f1)
