@@ -9,6 +9,14 @@ import type { UIStrings } from '../i18n/locales.ts';
 import { PremiumMarker, PREMIUM_COLORS, premiumLabel } from './PremiumMarker.tsx';
 
 const GAP = 2;
+const BORDER = 2;
+/** Horizontal space the grid container adds around its 13 tiles: the gaps
+ *  between columns, the padding and the border. --tile-size subtracts exactly
+ *  this, so the board can never outgrow the viewport when the chrome changes. */
+const BOARD_CHROME_PX = GAP * (BOARD_SIZE - 1) + GAP * 2 + BORDER * 2;
+/** Room left for the page's own side padding (Game.tsx, 8px each side at
+ *  phone widths) plus a little margin. */
+const PAGE_SLACK_PX = 24;
 
 const TIER_COLORS: Record<string, string> = {
   common: '#f5e6c8',
@@ -183,16 +191,17 @@ export function GameBoard() {
   return (
     <div
       style={{
+        '--tile-size': `clamp(20px, calc((100vw - ${BOARD_CHROME_PX + PAGE_SLACK_PX}px) / ${BOARD_SIZE}), 36px)`,
         display: 'inline-grid',
         gridTemplateColumns: `repeat(${BOARD_SIZE}, var(--tile-size))`,
         gap: GAP,
         padding: GAP,
         backgroundColor: '#16162a',
         borderRadius: 6,
-        border: '2px solid #3a3a5c',
+        border: `${BORDER}px solid #3a3a5c`,
         // Establishes the 3D space so dropping tiles' rotateX reads as depth.
         perspective: 700,
-      }}
+      } as CSSProperties}
     >
       {grid.flat().map(cell => (
         <Cell

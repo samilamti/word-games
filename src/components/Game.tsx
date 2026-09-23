@@ -317,7 +317,10 @@ export function Game() {
       >
         {/* Board area */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div ref={boardWrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
+          {/* alignSelf keeps the wrapper hugging the board: stretched to the
+              column's width (set by the rack when it is the widest item), the
+              BattleOverlay canvas that tracks this wrapper outgrows the board. */}
+          <div ref={boardWrapperRef} style={{ position: 'relative', display: 'inline-block', alignSelf: 'center' }}>
             <GameBoard />
             <BattleOverlay />
             <PremiumHintToast />

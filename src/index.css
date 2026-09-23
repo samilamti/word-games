@@ -1,5 +1,4 @@
 :root {
-  --tile-size: clamp(20px, calc((100vw - 24px) / 13), 36px);
   --rack-tile-size: clamp(40px, calc((100vw - 80px) / 7.5), 56px);
   --safe-top: env(safe-area-inset-top);
   --safe-right: env(safe-area-inset-right);
